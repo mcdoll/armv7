@@ -2,10 +2,11 @@
 // Author: Moritz Doll
 // License: MIT
 
-use register::{cpu::RegisterReadWrite, register_bitfields};
+use register::register_bitfields;
+pub use register::cpu::RegisterReadWrite;
 
 register_bitfields! {u32,
-    SCTLR [
+    pub SCTLR [
         MMU OFFSET(0) NUMBITS(1) [Enabled = 1, Disabled = 0],
         CACHE OFFSET(2) NUMBITS(1) [Enabled = 1, Disabled = 0],
         INSTR OFFSET(12) NUMBITS(1) [Enabled = 1, Disabled = 0],
