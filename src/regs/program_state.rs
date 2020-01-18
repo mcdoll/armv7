@@ -4,7 +4,7 @@ use core::fmt;
 use register::{cpu::RegisterReadWrite, register_bitfields, FieldValue};
 
 register_bitfields! {u32,
-    PSR [
+    pub PSR [
         MODE OFFSET(0) NUMBITS(5) [
             USR = 0b10000,
             FIQ = 0b10001,

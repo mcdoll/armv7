@@ -1,7 +1,7 @@
 //! Page table related
 
 
-use crate::regs::*;
+use crate::regs::vmem_control::*;
 //use crate::regs::ats;
 use core::fmt;
 use core::ops;

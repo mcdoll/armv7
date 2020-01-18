@@ -1,8 +1,8 @@
 //! Module for creating interrupt handlers
 
 //use core::default::Default;
-use core::ptr;
-use core::mem;
+//use core::ptr;
+//use core::mem;
 use core::ops;
 use register::mmio::*;
 use crate::PhysicalAddress;
