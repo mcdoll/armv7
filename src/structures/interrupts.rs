@@ -5,7 +5,7 @@
 //use core::mem;
 use core::ops;
 use register::mmio::*;
-use crate::PhysicalAddress;
+use crate::VirtualAddress;
 
 #[repr(C)]
 struct RegisterBlock {
@@ -45,9 +45,10 @@ impl VectorTableMemory {
     }
 
     fn new(hivecs: bool) -> Self {
-        let table_addr: u32 = match hivecs {
-            true => 0xffff_0000,
-            false => 0x0000_0000,
+        let table_addr: u32 = if hivecs {
+            0xffff_0000
+        } else {
+            0x0000_0000
         };
         VectorTableMemory { memory_addr: table_addr }
     }
@@ -69,7 +70,7 @@ impl VectorTable {
         let mem = VectorTableMemory::new(hivecs);
         VectorTable { vectors: mem }
     }
-    pub fn init(&self, initial_address: PhysicalAddress) {
+    pub fn init(&self, initial_address: VirtualAddress) {
         self.vectors.reset_handler.set(ASM_PC_24);
         self.vectors.undef_handler.set(ASM_PC_24);
         self.vectors.swi_handler.set(ASM_PC_24);
