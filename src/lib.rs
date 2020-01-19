@@ -42,22 +42,22 @@ impl VirtualAddress {
         Some(VirtualAddress(address))
     }
     /// Calculate for a virtual address the index in the base table
-    pub fn base_table_index(&self) -> usize {
+    pub fn base_table_index(self) -> usize {
         // Divide by 1Mb
         let base_addr = self.0 >> 20;
         base_addr as usize
         // (base_addr * 4) as usize
     }
     /// Calculate the index in a page table
-    pub fn page_table_index(&self) -> usize {
+    pub fn page_table_index(self) -> usize {
         let page_addr = (self.0 & 0xfffff) >> 12;
         page_addr as usize
     }
-    pub fn page_table_offset(&self) -> u32 {
+    pub fn page_table_offset(self) -> u32 {
         self.0 | 0xfff
     }
     /// Converts the address to an unsigned integer
-    pub fn as_u32(&self) -> u32 {
+    pub fn as_u32(self) -> u32 {
         self.0
     }
     /// Create a virtual address from a pointer
@@ -74,12 +74,12 @@ impl VirtualAddress {
     }
     /// Converts the address to a raw pointer
     #[cfg(target_pointer_width = "32")]
-    pub fn as_ptr<T>(&self) -> *const T {
+    pub fn as_ptr<T>(self) -> *const T {
         self.as_u32() as usize as *const T
     }
     /// Converts the address to a mutable raw pointer
     #[cfg(target_pointer_width = "32")]
-    pub fn as_mut_ptr<T>(&self) -> *mut T {
+    pub fn as_mut_ptr<T>(self) -> *mut T {
         self.as_ptr::<T>() as *mut T
     }
 }
@@ -164,7 +164,7 @@ impl PhysicalAddress {
         PhysicalAddress(addr)
     }
     /// Converts the address to an unsigned integer
-    pub const fn as_u32(&self) -> u32 {
+    pub const fn as_u32(self) -> u32 {
         self.0
     }
     /// Create a physical address from a pointer
@@ -173,7 +173,7 @@ impl PhysicalAddress {
     }
     /// Converts the address to a raw pointer
     #[cfg(target_pointer_width = "32")]
-    pub fn as_ptr<T>(&self) -> *const T {
+    pub fn as_ptr<T>(self) -> *const T {
         self.as_u32() as usize as *const T
     }
     /// Creates a physical address from an extern "C" fn
@@ -182,7 +182,7 @@ impl PhysicalAddress {
     }
     /// Converts the address to a mutable raw pointer
     #[cfg(target_pointer_width = "32")]
-    pub fn as_mut_ptr<T>(&self) -> *mut T {
+    pub fn as_mut_ptr<T>(self) -> *mut T {
         self.as_ptr::<T>() as *mut T
     }
 }
