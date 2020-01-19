@@ -26,7 +26,7 @@ register_bitfields! {u32,
     ]
 }
 
-pub fn set_current_mode(mode: FieldValue<u32, PSR::Register>) -> () {
+pub fn set_current_mode(mode: FieldValue<u32, PSR::Register>) {
     CPSR.modify(mode);
 }
 
