@@ -6,6 +6,9 @@
 use core::ops;
 use register::mmio::*;
 use crate::VirtualAddress;
+use crate::regs::security::*;
+use crate::regs::vmem_control::*;
+
 
 #[repr(C)]
 struct RegisterBlock {
@@ -40,15 +43,12 @@ impl ops::Deref for VectorTableMemory {
 }
 
 impl VectorTableMemory {
-    fn new_from_u32(addr: u32) -> Self {
-        VectorTableMemory { memory_addr: addr }
-    }
-
-    fn new(hivecs: bool) -> Self {
-        let table_addr: u32 = if hivecs {
+    fn new() -> Self {
+        let table_addr = if SCTLR.is_set(SCTLR::VECTOR) {
             0xffff_0000
         } else {
-            0x0000_0000
+            // We might have to check whether this register is there
+            VBAR.get()
         };
         VectorTableMemory { memory_addr: table_addr }
     }
@@ -57,17 +57,28 @@ impl VectorTableMemory {
     }
 }
 
+pub fn get_vectortable_address() -> VirtualAddress {
+    let table_addr = if SCTLR.is_set(SCTLR::VECTOR) {
+        0xffff_0000
+    } else {
+        // We might have to check whether this register is there
+        VBAR.get()
+    };
+    VirtualAddress::new(table_addr)
+}
+
 pub struct VectorTable {
     vectors: VectorTableMemory,
 }
 
 impl VectorTable {
-    pub fn new_from_u32(addr: u32) -> Self {
-        let mem = VectorTableMemory::new_from_u32(addr);
-        VectorTable { vectors: mem }
-    }
-    pub fn new(hivecs: bool) -> Self {
-        let mem = VectorTableMemory::new(hivecs);
+    /// Creates a pointer to the vector table as set in the system registers
+    ///
+    /// # Safety
+    /// The caller has to garantee that the address set in the SCTLR.V register or in the VBAR
+    /// register points to valid memory
+    pub fn new() -> Self {
+        let mem = VectorTableMemory::new();
         VectorTable { vectors: mem }
     }
     pub fn init(&self, initial_address: VirtualAddress) {
