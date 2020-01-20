@@ -6,7 +6,6 @@
 #![feature(asm)]
 #![feature(stdsimd)]
 #![no_std]
-#![feature(naked_functions)]
 #![feature(const_fn)]
 
 
