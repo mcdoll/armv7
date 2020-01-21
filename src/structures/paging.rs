@@ -1,4 +1,28 @@
-//! Page table related
+//! Module for paging related issues
+//!
+//! The pointer to the translation table base can be obtained by
+//! ```
+//!     TranslationTable::get_current_ttbr0()
+//! ```
+//! To create new entries in the table, first create a new memory attribute by
+//! ```
+//!     let attributes = MemoryAttributes::from(ATTRIBUTES::AP::PrivAccess);
+//! ```
+//! and then create a new section by
+//! ```
+//!     let section = TableDescriptor::new(TableType::Section, section_physical_address, attributes);
+//!     base_table[index] = section;
+//! ```
+//!
+//! A new second level pagetable can be created by
+//! ```
+//!     let pagetable = unsafe { PageTable::new(pagetable_virtual_address, attributes, base_table, index)? };
+//! ```
+//! A new entry in the pagetable is created by
+//! ```
+//!     let small_page = PageDescriptor::new(PageType::SmallPage, physical_address, attributes)?;
+//!     pagetable[index_pt] = small_page;
+//! ```
 
 
 use crate::regs::vmem_control::*;
@@ -49,7 +73,7 @@ pub struct MemoryAttributes(u32);
 // TEX---------AP2-
 //
 // 16--17--18--19--
-// S---nG--res-NS-
+// S---nG--res-NS--
 //
 // all higher bits are reserved (read/write 0)
 //
