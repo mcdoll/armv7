@@ -21,7 +21,7 @@ pub mod structures;
 pub struct VirtualAddress(u32);
 
 impl VirtualAddress {
-    pub fn new(addr: u32) -> VirtualAddress {
+    pub const fn new(addr: u32) -> VirtualAddress {
         VirtualAddress(addr)
     }
     pub fn from_indices(translation_index: usize, page_index: usize, offset: u32) -> Option<VirtualAddress> {
@@ -45,7 +45,6 @@ impl VirtualAddress {
         // Divide by 1Mb
         let base_addr = self.0 >> 20;
         base_addr as usize
-        // (base_addr * 4) as usize
     }
     /// Calculate the index in a page table
     pub fn page_table_index(self) -> usize {
