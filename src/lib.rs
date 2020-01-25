@@ -10,7 +10,7 @@
 
 
 use core::fmt;
-use core::ops::{Add, AddAssign, Sub, SubAssign};
+use core::ops::{BitOr, Add, AddAssign, Sub, SubAssign};
 
 //pub mod asm;
 pub mod regs;
@@ -92,6 +92,13 @@ impl Add<u32> for VirtualAddress {
 impl AddAssign<u32> for VirtualAddress {
     fn add_assign(&mut self, rhs: u32) {
         *self = *self + rhs;
+    }
+}
+
+impl BitOr<u32> for VirtualAddress {
+    type Output = Self;
+    fn bitor(self, rhs: u32) -> Self::Output {
+        VirtualAddress::new(self.0 | rhs)
     }
 }
 
