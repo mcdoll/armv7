@@ -8,23 +8,32 @@
 #![no_std]
 #![feature(const_fn)]
 
-
 use core::fmt;
-use core::ops::{BitOr, Add, AddAssign, Sub, SubAssign};
+use core::ops::{Add, AddAssign, BitOr, Sub, SubAssign};
 
 //pub mod asm;
 pub mod regs;
 pub mod structures;
 
-#[derive(Copy,Clone,Debug)]
+/// VirtualAddress is a newtype for u32
+/// They provide compile-time checks for handling virtual memory addresses
+#[derive(Copy, Clone, Debug)]
 #[repr(transparent)]
 pub struct VirtualAddress(u32);
 
 impl VirtualAddress {
+    /// Create a new virtual address
     pub const fn new(addr: u32) -> VirtualAddress {
         VirtualAddress(addr)
     }
-    pub fn from_indices(translation_index: usize, page_index: usize, offset: u32) -> Option<VirtualAddress> {
+    /// Create a virtual address from the indices of a translation table and a page table and the
+    /// offset
+    ///
+    pub fn from_indices(
+        translation_index: usize,
+        page_index: usize,
+        offset: u32,
+    ) -> Option<VirtualAddress> {
         use structures::paging::*;
         // The address is build as follows
         // 0xXXXY_YZZZ,
@@ -32,26 +41,30 @@ impl VirtualAddress {
         // Xs are the translation table index,
         // Ys are the page table index
         // Zs are the offset
-        if (translation_index >= TRANSLATION_TABLE_SIZE) ||
-        (page_index >= PAGE_TABLE_SIZE) ||
-        offset >= 0xfff { return None };
+        if (translation_index >= TRANSLATION_TABLE_SIZE)
+            || (page_index >= PAGE_TABLE_SIZE)
+            || offset >= 0xfff
+        {
+            return None;
+        };
         let mut address = (translation_index as u32) << 20;
         address |= (page_index as u32) << 12;
         address |= offset;
         Some(VirtualAddress(address))
     }
     /// Calculate for a virtual address the index in the base table
-    pub fn base_table_index(self) -> usize {
+    pub const fn base_table_index(self) -> usize {
         // Divide by 1Mb
         let base_addr = self.0 >> 20;
         base_addr as usize
     }
     /// Calculate the index in a page table
-    pub fn page_table_index(self) -> usize {
+    pub const fn page_table_index(self) -> usize {
         let page_addr = (self.0 & 0xfffff) >> 12;
         page_addr as usize
     }
-    pub fn page_table_offset(self) -> u32 {
+    /// Calculate the offset in a page table
+    pub const fn page_table_offset(self) -> u32 {
         self.0 | 0xfff
     }
     /// Converts the address to an unsigned integer
@@ -155,11 +168,11 @@ impl Sub<VirtualAddress> for VirtualAddress {
 impl fmt::LowerHex for VirtualAddress {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let val = self.0;
-        fmt::LowerHex::fmt(&val,f)
+        fmt::LowerHex::fmt(&val, f)
     }
 }
 
-#[derive(Copy,Clone,Debug)]
+#[derive(Copy, Clone, Debug)]
 #[repr(transparent)]
 pub struct PhysicalAddress(u32);
 
@@ -258,7 +271,6 @@ impl Sub<PhysicalAddress> for PhysicalAddress {
 impl fmt::LowerHex for PhysicalAddress {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let val = self.0;
-        fmt::LowerHex::fmt(&val,f)
+        fmt::LowerHex::fmt(&val, f)
     }
 }
-

@@ -1,8 +1,11 @@
-//! Registers for address translation
+//! Register access to the address translation functional group
+//!
+//! Deprecated. Use structures::paging::get_phys_frame
+//! instead
 // Author: Moritz Doll
 // License: MIT
 
-use register::cpu::{RegisterWriteOnly, RegisterReadWrite};
+use register::cpu::{RegisterReadWrite, RegisterWriteOnly};
 
 pub struct Stage1CurrentStatePL1Read;
 pub struct Stage1CurrentStatePL1Write;

@@ -1,4 +1,4 @@
-//! Access to the core registers of armv7
+//! Register access to the core registers
 // Author: Moritz Doll
 // License: MIT
 
@@ -17,10 +17,8 @@ impl RegisterReadWrite<u32, ()> for StackPointer {
     write_raw!(u32, "sp");
 }
 
-/// Stack pointer
+/// Program counter
 pub static PC: ProgramCounter = ProgramCounter {};
 
 /// Stack pointer
 pub static SP: StackPointer = StackPointer {};
-
-

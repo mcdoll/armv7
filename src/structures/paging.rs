@@ -2,7 +2,8 @@
 //!
 //! The pointer to the translation table base can be obtained by
 //! ```
-//!     TranslationTable::get_current_ttbr0()
+//!     let ttbr0_vaddr = VirtualAddress::new(0x8000_1000);
+//!     let base_table = TranslationTable::new(ttbr0_virt);
 //! ```
 //! To create new entries in the table, first create a new memory attribute by
 //! ```
@@ -24,13 +25,12 @@
 //!     pagetable[index_pt] = small_page;
 //! ```
 
-
 use crate::regs::vmem_control::*;
 //use crate::regs::ats;
+use crate::{PhysicalAddress, VirtualAddress};
+use core::arch::arm;
 use core::fmt;
 use core::ops;
-use core::arch::arm;
-use crate::{VirtualAddress,PhysicalAddress};
 use register::{register_bitfields, FieldValue};
 
 register_bitfields! {
@@ -57,7 +57,7 @@ register_bitfields! {
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 #[repr(transparent)]
-/// This struct captures all the possible memory attributes of pages
+/// This struct contains all the possible memory attributes of various page types
 pub struct MemoryAttributes(u32);
 // The internal structure is as follows:
 // 0---1---2---3---
@@ -92,16 +92,16 @@ impl MemoryAttributes {
                 // Copy NS
                 out |= (val & 0x8) << 16;
                 out
-            },
+            }
             TableType::Section => {
                 // this is easy, since we interally store the memory attributes as in the section
                 // table descriptor
                 val & 0x000b_fdfd
-            },
+            }
             TableType::Supersection => {
                 // similar to the section, but we have to set the domain (bits 5 to 8) to zero
                 val & 0x000d_fa1d
-            },
+            }
         };
         Some(MemoryAttributes(bitset))
     }
@@ -120,7 +120,7 @@ impl MemoryAttributes {
                 // Copy XN
                 out |= (val & 0x8000) >> (15 - 4);
                 MemoryAttributes(out)
-            },
+            }
             PageType::SmallPage => {
                 // first we copy the C and B bits to our output variable
                 let mut out = val & 0b1100;
@@ -129,7 +129,7 @@ impl MemoryAttributes {
                 // Copy AP, TEX, AP2, S, and nG
                 out |= (val & 0xff0) << (10 - 4);
                 MemoryAttributes(out)
-            },
+            }
         }
     }
     // For the cleaniness of the code, we have these functions here. They are only called in the
@@ -147,7 +147,7 @@ impl MemoryAttributes {
                 // Copy AP, TEX, AP2, S, and nG
                 val |= (self.0 & 0x3fc00) >> (10 - 4);
                 PageDescriptor(val)
-            },
+            }
             PageType::LargePage => {
                 let mut val = 0b1 | (self.0 & 0b1100);
                 // Copy AP
@@ -157,7 +157,7 @@ impl MemoryAttributes {
                 // Copy XN
                 val |= (self.0 & 0x10) << (15 - 4);
                 PageDescriptor(val)
-            },
+            }
         }
     }
     fn to_table_descriptor(self, tabletype: TableType) -> TableDescriptor {
@@ -167,12 +167,12 @@ impl MemoryAttributes {
                 let mut val = 1 | (self.0 & 0x1e0);
                 val |= (self.0 & 1) << 2;
                 TableDescriptor(val)
-            },
+            }
             TableType::Section => TableDescriptor(self.0 | 0x2),
             TableType::Supersection => {
                 let val = 0x4_0002 | (self.0 & 0xf_fc1f);
                 TableDescriptor(val)
-            },
+            }
         }
     }
 }
@@ -190,7 +190,7 @@ impl Default for MemoryAttributes {
     }
 }
 
-#[derive(Debug,Copy,Clone)]
+#[derive(Debug, Copy, Clone)]
 pub enum PageError {
     AlignError,
     TranslationError,
@@ -198,18 +198,19 @@ pub enum PageError {
     PermissionError,
     InvalidMemory,
     NotInRange,
-    IndexError
+    IndexError,
 }
 
-pub type Result<T> = ::core::result::Result<T,PageError>;
-
-
+pub type Result<T> = ::core::result::Result<T, PageError>;
 
 pub trait Alignable {
     fn is_aligned(&self, mask: u32) -> bool;
     fn check_align(&self, mask: u32) -> Result<()> {
-        if self.is_aligned(mask) { Ok(()) }
-        else { Err(PageError::AlignError) }
+        if self.is_aligned(mask) {
+            Ok(())
+        } else {
+            Err(PageError::AlignError)
+        }
     }
     fn align(&mut self, mask: u32);
 }
@@ -230,14 +231,19 @@ impl Alignable for PhysicalAddress {
     }
 }
 
-
-
+/// Calculate the physical frame from a given virtual address
+///
+/// # Safety
+/// This will give garbled output if virt_addr is not mapped
+/// The user has to check whether the output indicates an error or a valid address
 unsafe fn get_phys_frame(virt_addr: VirtualAddress, privileged: bool, writable: bool) -> u32 {
     let output;
     match (privileged, writable) {
         (true, false) => asm!("mcr p15, 0, $0, c7, c8, 0" :: "r"(virt_addr.as_u32()) :: "volatile"),
         (true, true) => asm!("mcr p15, 0, $0, c7, c8, 1" :: "r"(virt_addr.as_u32()) :: "volatile"),
-        (false, false) => asm!("mcr p15, 0, $0, c7, c8, 2" :: "r"(virt_addr.as_u32()) :: "volatile"),
+        (false, false) => {
+            asm!("mcr p15, 0, $0, c7, c8, 2" :: "r"(virt_addr.as_u32()) :: "volatile")
+        }
         (false, true) => asm!("mcr p15, 0, $0, c7, c8, 3" :: "r"(virt_addr.as_u32()) :: "volatile"),
     }
     asm!("mrc p15, 0, $0, c7, c4, 0" : "=r"(output) ::: "volatile");
@@ -248,20 +254,19 @@ unsafe fn _get_phys_frame_pr(virt_addr: VirtualAddress) -> u32 {
     get_phys_frame(virt_addr, true, false)
 }
 
-
-/// This function translates a virtual address to a physical address
+/// Translate a virtual address to a physical address
 pub fn get_phys_addr(virt_addr: VirtualAddress) -> Result<PhysicalAddress> {
     let frame_offset: u32 = virt_addr.as_u32() & 0xfff;
     let output = unsafe { get_phys_frame(virt_addr, true, false) & !0xfff };
     if (output & 0b1) == 0 {
-        return Ok(PhysicalAddress::new(output | frame_offset))
+        return Ok(PhysicalAddress::new(output | frame_offset));
     }
     // An error has occured.
     Err(PageError::TranslationError)
 }
 
-
-#[derive(Copy,Clone,Debug)]
+#[derive(Copy, Clone, Debug)]
+/// Models an offset mapping between virtual and physical memory
 pub struct OffsetMapping {
     virt_start: VirtualAddress,
     phys_start: PhysicalAddress,
@@ -269,6 +274,7 @@ pub struct OffsetMapping {
 }
 
 impl OffsetMapping {
+    /// Create a new offset mapping
     pub fn new(virt_start: VirtualAddress, phys_start: PhysicalAddress, size: u32) -> Self {
         OffsetMapping {
             virt_start,
@@ -276,21 +282,23 @@ impl OffsetMapping {
             size,
         }
     }
+    /// Checks whether a virtual address is in the range of the offset mapping
     pub fn virt_addr_in_range(&self, virt_addr: VirtualAddress) -> bool {
         if virt_addr.as_u32() < self.virt_start.as_u32() {
-            return false
+            return false;
         }
         if virt_addr.as_u32() > self.virt_start.as_u32() + self.size {
-            return false
+            return false;
         }
         true
     }
+    /// Checks whether a physical address is in the range of the offset mapping
     pub fn phys_addr_in_range(&self, phys_addr: PhysicalAddress) -> bool {
         if phys_addr.as_u32() < self.phys_start.as_u32() {
-            return false
+            return false;
         }
         if phys_addr.as_u32() > self.phys_start.as_u32() + self.size {
-            return false
+            return false;
         }
         true
     }
@@ -298,7 +306,7 @@ impl OffsetMapping {
     /// Given a offset mapping calculate the virtual address from the physical address
     pub fn convert_virt_addr(&self, vaddr: VirtualAddress) -> Result<PhysicalAddress> {
         if !self.virt_addr_in_range(vaddr) {
-            return Err(PageError::NotInRange)
+            return Err(PageError::NotInRange);
         }
         let diff = vaddr.as_u32() - self.virt_start.as_u32();
         Ok(PhysicalAddress::new(self.phys_start.as_u32() + diff))
@@ -307,16 +315,15 @@ impl OffsetMapping {
     /// Given a offset mapping calculate the physical address from the virtual address
     pub fn convert_phys_addr(&self, paddr: PhysicalAddress) -> Result<VirtualAddress> {
         if !self.phys_addr_in_range(paddr) {
-            return Err(PageError::NotInRange)
+            return Err(PageError::NotInRange);
         }
         let diff = paddr.as_u32() - self.phys_start.as_u32();
         Ok(VirtualAddress::new(self.virt_start.as_u32() + diff))
     }
 }
 
-
-
-#[derive(Copy,Clone,Debug,PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
+/// Different types of entries in a translation table
 pub enum TableType {
     Invalid,
     Page,
@@ -335,8 +342,9 @@ impl TableType {
     }
 }
 
-#[derive(Copy,Clone,Debug)]
+#[derive(Copy, Clone, Debug)]
 #[repr(transparent)]
+/// A descriptor for a translation table entry
 pub struct TableDescriptor(u32);
 
 impl Alignable for TableDescriptor {
@@ -351,7 +359,7 @@ impl Alignable for TableDescriptor {
 impl fmt::LowerHex for TableDescriptor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let val = self.0;
-        fmt::LowerHex::fmt(&val,f)
+        fmt::LowerHex::fmt(&val, f)
     }
 }
 
@@ -368,6 +376,7 @@ impl ops::BitOrAssign<u32> for TableDescriptor {
 }
 
 impl TableDescriptor {
+    /// Determine the type of the table descriptor
     pub fn get_type(self) -> TableType {
         // starts with
         // 0b00: invalid
@@ -377,18 +386,20 @@ impl TableDescriptor {
         match self.0 & 0b11 {
             0b00 => TableType::Invalid,
             0b01 => TableType::Page,
-            _ => {
-                match self.0 & 0x40000 {
-                    0b0 => TableType::Section,
-                    _ => TableType::Supersection,
-                }
-            }
+            _ => match self.0 & 0x40000 {
+                0b0 => TableType::Section,
+                _ => TableType::Supersection,
+            },
         }
     }
     /// Create a new table descriptor
-    pub fn new(tabletype: TableType, addr: PhysicalAddress, attributes: MemoryAttributes) -> Result<TableDescriptor> {
+    pub fn new(
+        tabletype: TableType,
+        addr: PhysicalAddress,
+        attributes: MemoryAttributes,
+    ) -> Result<TableDescriptor> {
         if tabletype == TableType::Invalid {
-            return Ok(TableDescriptor(0))
+            return Ok(TableDescriptor(0));
         }
         addr.check_align(tabletype.align())?;
         let mut out = attributes.to_table_descriptor(tabletype);
@@ -397,7 +408,8 @@ impl TableDescriptor {
     }
 }
 
-#[derive(Copy,Clone,Debug,PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
+/// Different types of entries in a page table
 pub enum PageType {
     Invalid,
     SmallPage,
@@ -405,7 +417,7 @@ pub enum PageType {
 }
 
 impl PageType {
-   fn align(self) -> u32 {
+    fn align(self) -> u32 {
         match self {
             PageType::Invalid => 0,
             PageType::SmallPage => 0xfff,
@@ -414,8 +426,9 @@ impl PageType {
     }
 }
 
-#[derive(Copy,Clone,Debug)]
+#[derive(Copy, Clone, Debug)]
 #[repr(transparent)]
+/// A descriptor for a page table entry
 pub struct PageDescriptor(u32);
 
 impl Alignable for PageDescriptor {
@@ -430,7 +443,7 @@ impl Alignable for PageDescriptor {
 impl fmt::LowerHex for PageDescriptor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let val = self.0;
-        fmt::LowerHex::fmt(&val,f)
+        fmt::LowerHex::fmt(&val, f)
     }
 }
 
@@ -446,12 +459,15 @@ impl ops::BitOrAssign<u32> for PageDescriptor {
     }
 }
 
-
 impl PageDescriptor {
     /// Construct a new page descriptor
-    pub fn new(pagetype: PageType, addr: PhysicalAddress, attributes: MemoryAttributes) -> Result<PageDescriptor> {
+    pub fn new(
+        pagetype: PageType,
+        addr: PhysicalAddress,
+        attributes: MemoryAttributes,
+    ) -> Result<PageDescriptor> {
         if pagetype == PageType::Invalid {
-            return Ok(PageDescriptor(0))
+            return Ok(PageDescriptor(0));
         }
         addr.check_align(pagetype.align())?;
         let mut out = attributes.to_page_descriptor(pagetype);
@@ -473,9 +489,11 @@ impl PageDescriptor {
     /// Get the physical base address the page is pointing to.
     pub fn get_addr(self) -> Result<PhysicalAddress> {
         let page_type = self.get_type();
-        if page_type == PageType::Invalid { return Err(PageError::InvalidMemory) }
-        let strip_addr = self.0 & ( !page_type.align() );
-        Ok( PhysicalAddress ( strip_addr ) )
+        if page_type == PageType::Invalid {
+            return Err(PageError::InvalidMemory);
+        }
+        let strip_addr = self.0 & (!page_type.align());
+        Ok(PhysicalAddress(strip_addr))
     }
 }
 
@@ -499,19 +517,24 @@ impl TranslationTable {
     /// The caller must garantee that the virtual address maps to a base table
     pub unsafe fn new(virt_addr: VirtualAddress) -> Result<Self> {
         virt_addr.check_align(0x3fff)?;
-        Ok(TranslationTable { pointer: virt_addr.as_u32() as *mut _ })
+        Ok(TranslationTable {
+            pointer: virt_addr.as_u32() as *mut _,
+        })
     }
-    
-    /// This functions is deprecated
+
+    /// This functions is deprecated since it assumes that the ttbr0 is on indentity-mapped memory
+    /// address
     pub fn get_current_ttbr0() -> Self {
         let ttbr0 = TTBR0.get() & !0x3fff;
-        TranslationTable { pointer: ttbr0 as *mut _ }
+        TranslationTable {
+            pointer: ttbr0 as *mut _,
+        }
     }
 
     fn ptr(&self) -> *mut TranslationTableMemory {
         self.pointer
     }
-    
+
     /// Returns the physical address of the translation page table
     pub fn get_phys_addr() -> PhysicalAddress {
         PhysicalAddress::new(TTBR0.get() & !0x3fff)
@@ -535,7 +558,7 @@ impl TranslationTable {
 impl fmt::LowerHex for TranslationTable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let val = self.pointer as usize as u32;
-        fmt::LowerHex::fmt(&val,f)
+        fmt::LowerHex::fmt(&val, f)
     }
 }
 
@@ -569,13 +592,21 @@ impl PageTable {
     /// # Safety
     /// The caller must garantee that the virtual address is mapped to a valid physical address in
     /// RAM.
-    pub unsafe fn new(virt_addr: VirtualAddress, mem_attributes: MemoryAttributes, base_table: &mut TranslationTable, index: usize) -> Result<Self> {
+    pub unsafe fn new(
+        virt_addr: VirtualAddress,
+        mem_attributes: MemoryAttributes,
+        base_table: &mut TranslationTable,
+        index: usize,
+    ) -> Result<Self> {
         virt_addr.check_align(0x3ff)?;
         let pointer = virt_addr.as_u32() as *mut PageTableMemory;
         let phys_addr = get_phys_addr(virt_addr)?;
         let descriptor = TableDescriptor::new(TableType::Page, phys_addr, mem_attributes)?;
         base_table[index] = descriptor;
-        let page_table = PageTable { pointer, descriptor };
+        let page_table = PageTable {
+            pointer,
+            descriptor,
+        };
         Ok(page_table)
     }
     fn ptr(&self) -> *mut PageTableMemory {
@@ -595,4 +626,3 @@ impl ops::IndexMut<usize> for PageTable {
         unsafe { &mut (*self.ptr()).table[index] }
     }
 }
-

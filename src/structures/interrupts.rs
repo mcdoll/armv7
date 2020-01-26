@@ -3,31 +3,30 @@
 //use core::default::Default;
 //use core::ptr;
 //use core::mem;
-use core::ops;
-use register::mmio::*;
-use crate::VirtualAddress;
 use crate::regs::security::*;
 use crate::regs::vmem_control::*;
-
+use crate::VirtualAddress;
+use core::ops;
+use register::mmio::*;
 
 #[repr(C)]
 struct RegisterBlock {
-    reset_handler: ReadWrite<u32,()>,
-    undef_handler: ReadWrite<u32,()>,
-    swi_handler: ReadWrite<u32,()>,
-    prefetch_handler: ReadWrite<u32,()>,
-    data_handler: ReadWrite<u32,()>,
-    hyp_handler: ReadWrite<u32,()>,
-    irq_handler: ReadWrite<u32,()>,
-    fiq_handler: ReadWrite<u32,()>,
-    reset_addr: ReadWrite<u32,()>,
-    undef_addr: ReadWrite<u32,()>,
-    swi_addr: ReadWrite<u32,()>,
-    prefetch_addr: ReadWrite<u32,()>,
-    data_addr: ReadWrite<u32,()>,
-    hyp_addr: ReadWrite<u32,()>,
-    irq_addr: ReadWrite<u32,()>,
-    fiq_addr: ReadWrite<u32,()>,
+    reset_handler: ReadWrite<u32, ()>,
+    undef_handler: ReadWrite<u32, ()>,
+    swi_handler: ReadWrite<u32, ()>,
+    prefetch_handler: ReadWrite<u32, ()>,
+    data_handler: ReadWrite<u32, ()>,
+    hyp_handler: ReadWrite<u32, ()>,
+    irq_handler: ReadWrite<u32, ()>,
+    fiq_handler: ReadWrite<u32, ()>,
+    reset_addr: ReadWrite<u32, ()>,
+    undef_addr: ReadWrite<u32, ()>,
+    swi_addr: ReadWrite<u32, ()>,
+    prefetch_addr: ReadWrite<u32, ()>,
+    data_addr: ReadWrite<u32, ()>,
+    hyp_addr: ReadWrite<u32, ()>,
+    irq_addr: ReadWrite<u32, ()>,
+    fiq_addr: ReadWrite<u32, ()>,
 }
 
 #[repr(transparent)]
@@ -38,7 +37,7 @@ struct VectorTableMemory {
 impl ops::Deref for VectorTableMemory {
     type Target = RegisterBlock;
     fn deref(&self) -> &Self::Target {
-        unsafe {&*self.ptr() }
+        unsafe { &*self.ptr() }
     }
 }
 
@@ -50,7 +49,9 @@ impl VectorTableMemory {
             // We might have to check whether this register is there
             VBAR.get()
         };
-        VectorTableMemory { memory_addr: table_addr }
+        VectorTableMemory {
+            memory_addr: table_addr,
+        }
     }
     fn ptr(&self) -> *mut RegisterBlock {
         self.memory_addr as *mut _

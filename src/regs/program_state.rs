@@ -1,4 +1,18 @@
-//! Program State Register
+//! Register access to the program state registers
+//!
+//! # Usage examples
+//! Reading the current mode:
+//! ```
+//!     CPSR.read_as_enum(PSR::MODE);
+//! ```
+//! Read masking of IRQ:
+//! ```
+//!     CPSR.is_set(PSR::IRQ);
+//! ```
+//! Enable FIQs
+//! ```
+//!     CPSR.modify(PSR::FIQ::NotMasked);
+//! ```
 
 use core::fmt;
 use register::{cpu::RegisterReadWrite, register_bitfields, FieldValue};
@@ -47,11 +61,9 @@ impl fmt::Display for PSR::MODE::Value {
     }
 }
 
-
 pub fn get_current_mode() -> Option<PSR::MODE::Value> {
     CPSR.read_as_enum(PSR::MODE)
 }
-
 
 pub struct CurrentProgramState;
 
@@ -71,5 +83,3 @@ impl RegisterReadWrite<u32, PSR::Register> for SavedProgramState {
 pub static CPSR: CurrentProgramState = CurrentProgramState {};
 /// Saved Program State register
 pub static SPSR: SavedProgramState = SavedProgramState {};
-
-

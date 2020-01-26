@@ -1,6 +1,5 @@
 // Module taken from Cortex-A crate by Andre Richter
 
-
 macro_rules! __read_raw {
     ($width:ty, $asm_instr:tt, $asm_reg_name:tt) => {
         /// Reads the raw bits of the CPU register.
@@ -105,7 +104,6 @@ macro_rules! psr_write_raw {
         __write_raw!($width, "msr", $asm_reg_name);
     };
 }
-
 
 /// Raw read from (ordinary) registers
 macro_rules! read_raw {
