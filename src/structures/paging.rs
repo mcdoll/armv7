@@ -12,7 +12,7 @@
 //! and then create a new section by
 //! ```
 //!     let section = TableDescriptor::new(TableType::Section, section_physical_address, attributes);
-//!     base_table[index] = section;
+//!     unsafe { base_table.table_mut()[index] = section };
 //! ```
 //!
 //! A new second level pagetable can be created by
@@ -22,11 +22,10 @@
 //! A new entry in the pagetable is created by
 //! ```
 //!     let small_page = PageDescriptor::new(PageType::SmallPage, physical_address, attributes)?;
-//!     pagetable[index_pt] = small_page;
+//!     unsafe { pagetable.table_mut()[index_pt] = small_page };
 //! ```
 
 use crate::regs::vmem_control::*;
-//use crate::regs::ats;
 use crate::{PhysicalAddress, VirtualAddress};
 use core::arch::arm;
 use core::fmt;
@@ -506,6 +505,7 @@ struct TranslationTableMemory {
 }
 
 #[derive(Debug)]
+/// Base level translation table
 pub struct TranslationTable {
     pointer: *mut TranslationTableMemory,
 }
@@ -531,8 +531,19 @@ impl TranslationTable {
         }
     }
 
-    fn ptr(&self) -> *mut TranslationTableMemory {
-        self.pointer
+    /// Mutable reference to the translation table
+    ///
+    /// # Safety
+    /// The caller must ensure that all entries are valid and don't interfere with memory layout of
+    /// the program
+    pub unsafe fn table_mut(&mut self) -> &mut [TableDescriptor; TRANSLATION_TABLE_SIZE] {
+        &mut (*self.pointer).table
+    }
+
+    /// Immutable reference to the translation table
+    ///
+    pub fn table(&self) -> &[TableDescriptor; TRANSLATION_TABLE_SIZE] {
+        unsafe { &(*self.pointer).table }
     }
 
     /// Returns the physical address of the translation page table
@@ -562,25 +573,13 @@ impl fmt::LowerHex for TranslationTable {
     }
 }
 
-impl ops::Index<usize> for TranslationTable {
-    type Output = TableDescriptor;
-    fn index(&self, index: usize) -> &Self::Output {
-        unsafe { &(*self.ptr()).table[index] }
-    }
-}
-
-impl ops::IndexMut<usize> for TranslationTable {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        unsafe { &mut (*self.ptr()).table[index] }
-    }
-}
-
 #[repr(transparent)]
 struct PageTableMemory {
     table: [PageDescriptor; PAGE_TABLE_SIZE],
 }
 
 #[derive(Debug)]
+/// Second level page table
 pub struct PageTable {
     pointer: *mut PageTableMemory,
     descriptor: TableDescriptor,
@@ -592,6 +591,9 @@ impl PageTable {
     /// # Safety
     /// The caller must garantee that the virtual address is mapped to a valid physical address in
     /// RAM.
+    ///
+    /// Moreover any interaction with the pagetable is unsafe as it might corrupt data rust is
+    /// interacting with.
     pub unsafe fn new(
         virt_addr: VirtualAddress,
         mem_attributes: MemoryAttributes,
@@ -602,27 +604,23 @@ impl PageTable {
         let pointer = virt_addr.as_u32() as *mut PageTableMemory;
         let phys_addr = get_phys_addr(virt_addr)?;
         let descriptor = TableDescriptor::new(TableType::Page, phys_addr, mem_attributes)?;
-        base_table[index] = descriptor;
+        base_table.table_mut()[index] = descriptor;
         let page_table = PageTable {
             pointer,
             descriptor,
         };
         Ok(page_table)
     }
-    fn ptr(&self) -> *mut PageTableMemory {
-        self.pointer
+    /// Mutable reference to the page table
+    ///
+    /// # Safety
+    /// The caller must ensure that all entries are valid and don't interfere with memory layout of
+    /// the program
+    pub unsafe fn table_mut(&mut self) -> &mut [PageDescriptor; PAGE_TABLE_SIZE] {
+        &mut (*self.pointer).table
     }
-}
-
-impl ops::Index<usize> for PageTable {
-    type Output = PageDescriptor;
-    fn index(&self, index: usize) -> &Self::Output {
-        unsafe { &(*self.ptr()).table[index] }
-    }
-}
-
-impl ops::IndexMut<usize> for PageTable {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        unsafe { &mut (*self.ptr()).table[index] }
+    /// Immutable reference to the page table
+    pub fn table(&self) -> &[PageDescriptor; PAGE_TABLE_SIZE] {
+        unsafe { &(*self.pointer).table }
     }
 }
