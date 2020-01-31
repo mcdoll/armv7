@@ -2,5 +2,7 @@ language: rust
 rust:
     - nightly
 cache: cargo
+script:
+    - cargo build
 before_install:
     rustup target add armv7a-none-eabi
