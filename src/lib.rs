@@ -15,8 +15,6 @@ use core::ops::{Add, AddAssign, BitOr, Sub, SubAssign};
 pub mod regs;
 pub mod structures;
 
-/// VirtualAddress is a newtype for u32
-/// They provide compile-time checks for handling virtual memory addresses
 #[derive(Copy, Clone, Debug)]
 #[repr(transparent)]
 pub struct VirtualAddress(u32);

@@ -3,7 +3,7 @@
 //! The pointer to the translation table base can be obtained by
 //! ```
 //!     let ttbr0_vaddr = VirtualAddress::new(0x8000_1000);
-//!     let base_table = TranslationTable::new(ttbr0_virt);
+//!     let base_table = unsafe { TranslationTable::new(ttbr0_virt) };
 //! ```
 //! To create new entries in the table, first create a new memory attribute by
 //! ```

@@ -1,4 +1,4 @@
-//! Access to the registers of virtual memory control functional group
+//! Register access to the virtual memory control functional group
 //!
 //! # Usage examples
 //! Read the current translation table

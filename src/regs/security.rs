@@ -1,8 +1,9 @@
 // Author: Moritz Doll
 // License: MIT
 
-//! Security extension registers
-//! according to the ARMv7 Architectural Reference Manual
+//! Register access to the security extension registers
+//!
+//! Functional group according to the ARM ARM
 
 use register::cpu::*;
 

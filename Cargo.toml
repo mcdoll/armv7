@@ -1,6 +1,9 @@
 [package]
 name = "armv7"
+description = "Low level routines for the armv7 instruction set with VMSA"
 version = "0.1.0"
+repository = "https://github.com/mcdoll/armv7"
+license = "MIT"
 authors = ["Moritz Doll"]
 edition = "2018"
 

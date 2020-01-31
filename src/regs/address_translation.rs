@@ -1,7 +1,8 @@
 //! Register access to the address translation functional group
 //!
-//! Deprecated. Use structures::paging::get_phys_frame
-//! instead
+//! Functional group according to the ARM ARM
+//! You should consider using structures::paging::get_phys_frame
+//! instead of this module
 // Author: Moritz Doll
 // License: MIT
 
