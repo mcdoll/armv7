@@ -13,8 +13,6 @@
 //! ```
 //!     SCTLR.modify(SCTLR::MMU::Enable);
 //! ```
-// Author: Moritz Doll
-// License: MIT
 
 pub use register::cpu::RegisterReadWrite;
 use register::register_bitfields;

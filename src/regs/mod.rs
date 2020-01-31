@@ -1,7 +1,4 @@
 //! Processor registers
-//
-// Author: Moritz Doll
-// License: MIT
 
 // The naming scheme and the submodules are according to the ARM Architecture Reference manual.
 // The name of the struct is the description in ARM ARM and the static instance is name

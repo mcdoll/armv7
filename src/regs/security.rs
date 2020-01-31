@@ -1,6 +1,3 @@
-// Author: Moritz Doll
-// License: MIT
-
 //! Register access to the security extension registers
 //!
 //! Functional group according to the ARM ARM

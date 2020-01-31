@@ -1,7 +1,4 @@
 //! Crate for low-level armv7 routines
-//
-// Author: Moritz Doll
-// License: MIT
 
 #![feature(asm)]
 #![feature(stdsimd)]

@@ -3,8 +3,6 @@
 //! Functional group according to the ARM ARM
 //! You should consider using structures::paging::get_phys_frame
 //! instead of this module
-// Author: Moritz Doll
-// License: MIT
 
 use register::cpu::{RegisterReadWrite, RegisterWriteOnly};
 

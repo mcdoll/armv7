@@ -1,6 +1,4 @@
 //! Register access to the core registers
-// Author: Moritz Doll
-// License: MIT
 
 use register::cpu::RegisterReadWrite;
 

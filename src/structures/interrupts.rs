@@ -1,8 +1,5 @@
 //! Module for creating interrupt handlers
 
-//use core::default::Default;
-//use core::ptr;
-//use core::mem;
 use crate::regs::security::*;
 use crate::regs::vmem_control::*;
 use crate::VirtualAddress;
