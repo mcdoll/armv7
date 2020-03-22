@@ -230,6 +230,93 @@ impl Alignable for PhysicalAddress {
     }
 }
 
+/// Translate MMIO address range to virtual addresses
+pub struct DeviceVmemMapper {
+    base_address: VirtualAddress,
+    device_base_addresses: &'static [u8],
+}
+
+impl DeviceVmemMapper {
+    /// Create a new mapper
+    ///
+    /// base_address is the base of the virtual address range that will be used
+    /// device_base_addresses is a list of the leading bits of the physical addresses
+    pub fn new(
+        base_address: VirtualAddress,
+        device_base_addresses: &'static [u8],
+    ) -> Result<Self> {
+        base_address.check_align(0x00ff_ffff)?;
+        let out = DeviceVmemMapper {
+            base_address,
+            device_base_addresses,
+        };
+        Ok(out)
+    }
+
+    /// Create a new mapper
+    ///
+    /// base_address is the base of the virtual address range that will be used
+    /// device_base_addresses is a list of the leading bits of the physical addresses
+    /// # Safety
+    /// This function does not check whether the base address is aligned to 16MB,
+    /// ie base_address has to be of the form 0x??00_0000
+    pub const unsafe fn new_const(
+        base_address: VirtualAddress,
+        device_base_addresses: &'static [u8],
+    ) -> Self {
+        DeviceVmemMapper {
+            base_address,
+            device_base_addresses,
+        }
+    }
+
+    /// Perform the mapping
+    /// # Safety
+    /// This function should only be called once and the virtual address range has to be empty.
+    // Actually, calling the function twice does not hurt
+    pub unsafe fn do_mapping(
+        &self,
+        base_table: &mut TranslationTable,
+    ) -> Result<()> {
+        let attributes = MemoryAttributes::from(
+            ATTRIBUTES::AP::PrivAccess + ATTRIBUTES::XN::Enable,
+        );
+        let mut base_addr = self.base_address;
+        for addr in self.device_base_addresses.iter() {
+            let bt_index = base_addr.base_table_index();
+            let device_base = PhysicalAddress::new((*addr as u32) << 24);
+            // Each 16MB supersection uses 16 1MB sections
+            for index in 0..15 {
+                let section = TableDescriptor::new(
+                    TableType::Section,
+                    device_base + 0x10_0000 * index as u32,
+                    attributes,
+                )?;
+                base_table.table_mut()[bt_index + index as usize] = section;
+            }
+            // increment the base address
+            base_addr += 0x0100_0000 as u32;
+        }
+        Ok(())
+    }
+    /// Lookup virtual addresses from physical ones
+    pub fn lookup(&self, phys_addr: PhysicalAddress) -> Option<VirtualAddress> {
+        let phys_index = phys_addr.as_u32() >> 24;
+        match self
+            .device_base_addresses
+            .iter()
+            .position(|&y| y == phys_index as u8)
+        {
+            None => None,
+            Some(index) => {
+                let naked_phys_addr = phys_addr.as_u32() & 0x00ff_ffff;
+                let out = self.base_address + (index << 24);
+                Some(out | naked_phys_addr)
+            }
+        }
+    }
+}
+
 /// Calculate the physical frame from a given virtual address
 ///
 /// # Safety
