@@ -325,14 +325,14 @@ impl DeviceVmemMapper {
 unsafe fn get_phys_frame(virt_addr: VirtualAddress, privileged: bool, writable: bool) -> u32 {
     let output;
     match (privileged, writable) {
-        (true, false) => asm!("mcr p15, 0, $0, c7, c8, 0" :: "r"(virt_addr.as_u32()) :: "volatile"),
-        (true, true) => asm!("mcr p15, 0, $0, c7, c8, 1" :: "r"(virt_addr.as_u32()) :: "volatile"),
+        (true, false) => llvm_asm!("mcr p15, 0, $0, c7, c8, 0" :: "r"(virt_addr.as_u32()) :: "volatile"),
+        (true, true) => llvm_asm!("mcr p15, 0, $0, c7, c8, 1" :: "r"(virt_addr.as_u32()) :: "volatile"),
         (false, false) => {
-            asm!("mcr p15, 0, $0, c7, c8, 2" :: "r"(virt_addr.as_u32()) :: "volatile")
+            llvm_asm!("mcr p15, 0, $0, c7, c8, 2" :: "r"(virt_addr.as_u32()) :: "volatile")
         }
-        (false, true) => asm!("mcr p15, 0, $0, c7, c8, 3" :: "r"(virt_addr.as_u32()) :: "volatile"),
+        (false, true) => llvm_asm!("mcr p15, 0, $0, c7, c8, 3" :: "r"(virt_addr.as_u32()) :: "volatile"),
     }
-    asm!("mrc p15, 0, $0, c7, c4, 0" : "=r"(output) ::: "volatile");
+    llvm_asm!("mrc p15, 0, $0, c7, c4, 0" : "=r"(output) ::: "volatile");
     output
 }
 

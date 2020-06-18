@@ -10,7 +10,7 @@ macro_rules! __read_raw {
                 () => {
                     let reg;
                     unsafe {
-                        asm!(concat!($asm_instr, " $0, ", $asm_reg_name) : "=r"(reg) ::: "volatile");
+                        llvm_asm!(concat!($asm_instr, " $0, ", $asm_reg_name) : "=r"(reg) ::: "volatile");
                     }
                     reg
                 }
@@ -32,7 +32,7 @@ macro_rules! __write_raw {
                 #[cfg(target_arch = "arm")]
                 () => {
                     unsafe {
-                        asm!(concat!($asm_instr, " ", $asm_reg_name, ", $0") :: "r"(value) :: "volatile")
+                        llvm_asm!(concat!($asm_instr, " ", $asm_reg_name, ", $0") :: "r"(value) :: "volatile")
                     }
                 }
 
@@ -55,7 +55,7 @@ macro_rules! sys_coproc_read_raw {
                 () => {
                     let reg;
                     unsafe {
-                        asm!(concat!("mrc ", $asm_cp, ", ", $asm_opc1, ", $0, ", $asm_crn, ", ", $asm_crm, ", ", $asm_opc2) : "=r"(reg) ::: "volatile");
+                        llvm_asm!(concat!("mrc ", $asm_cp, ", ", $asm_opc1, ", $0, ", $asm_crn, ", ", $asm_crm, ", ", $asm_opc2) : "=r"(reg) ::: "volatile");
                                      //" $0, ", $asm_reg_name) : "=r"(reg) ::: "volatile");
                     }
                     reg
@@ -80,7 +80,7 @@ macro_rules! sys_coproc_write_raw {
                 #[cfg(target_arch = "arm")]
                 () => {
                     unsafe {
-                        asm!(concat!("mcr ", $asm_cp, ", ", $asm_opc1, ", $0, ", $asm_crn, ", ", $asm_crm, ", ", $asm_opc2) :: "r"(value) :: "volatile");
+                        llvm_asm!(concat!("mcr ", $asm_cp, ", ", $asm_opc1, ", $0, ", $asm_crn, ", ", $asm_crm, ", ", $asm_opc2) :: "r"(value) :: "volatile");
                     }
                 }
 

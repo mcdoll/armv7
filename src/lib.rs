@@ -1,6 +1,6 @@
 //! Crate for low-level armv7 routines
 
-#![feature(asm)]
+#![feature(llvm_asm)]
 #![feature(stdsimd)]
 #![no_std]
 #![feature(const_fn)]
