@@ -361,7 +361,7 @@ pub struct OffsetMapping {
 
 impl OffsetMapping {
     /// Create a new offset mapping
-    pub fn new(virt_start: VirtualAddress, phys_start: PhysicalAddress, size: u32) -> Self {
+    pub const fn new(virt_start: VirtualAddress, phys_start: PhysicalAddress, size: u32) -> Self {
         OffsetMapping {
             virt_start,
             phys_start,
