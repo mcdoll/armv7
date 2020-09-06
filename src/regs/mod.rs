@@ -11,5 +11,6 @@ pub mod core_regs; // this is called core_regs to avoid a name clash with the co
 pub mod program_state;
 pub mod security;
 pub mod vmem_control;
+pub mod fault_handling;
 
 pub use register::cpu::*;
