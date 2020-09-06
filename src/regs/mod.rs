@@ -8,9 +8,9 @@ mod macros;
 
 pub mod address_translation;
 pub mod core_regs; // this is called core_regs to avoid a name clash with the core crate
+pub mod fault_handling;
 pub mod program_state;
 pub mod security;
 pub mod vmem_control;
-pub mod fault_handling;
 
 pub use register::cpu::*;

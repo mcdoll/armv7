@@ -21,7 +21,6 @@ pub struct DataFaultStatus;
 pub struct InstructionFaultAddress;
 pub struct InstructionFaultStatus;
 
-
 impl RegisterReadWrite<u32, ()> for DataFaultAddress {
     sys_coproc_read_raw!(u32, "p15", "c6", "c0", "0", "0");
     sys_coproc_write_raw!(u32, "p15", "c6", "c0", "0", "0");

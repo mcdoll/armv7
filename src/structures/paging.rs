@@ -241,10 +241,7 @@ impl DeviceVmemMapper {
     ///
     /// base_address is the base of the virtual address range that will be used
     /// device_base_addresses is a list of the leading bits of the physical addresses
-    pub fn new(
-        base_address: VirtualAddress,
-        device_base_addresses: &'static [u8],
-    ) -> Result<Self> {
+    pub fn new(base_address: VirtualAddress, device_base_addresses: &'static [u8]) -> Result<Self> {
         base_address.check_align(0x00ff_ffff)?;
         let out = DeviceVmemMapper {
             base_address,
@@ -274,13 +271,9 @@ impl DeviceVmemMapper {
     /// # Safety
     /// This function should only be called once and the virtual address range has to be empty.
     // Actually, calling the function twice does not hurt
-    pub unsafe fn do_mapping(
-        &self,
-        base_table: &mut TranslationTable,
-    ) -> Result<()> {
-        let attributes = MemoryAttributes::from(
-            ATTRIBUTES::AP::PrivAccess + ATTRIBUTES::XN::Enable,
-        );
+    pub unsafe fn do_mapping(&self, base_table: &mut TranslationTable) -> Result<()> {
+        let attributes =
+            MemoryAttributes::from(ATTRIBUTES::AP::PrivAccess + ATTRIBUTES::XN::Enable);
         let mut base_addr = self.base_address;
         for addr in self.device_base_addresses.iter() {
             let bt_index = base_addr.base_table_index();
@@ -325,12 +318,18 @@ impl DeviceVmemMapper {
 unsafe fn get_phys_frame(virt_addr: VirtualAddress, privileged: bool, writable: bool) -> u32 {
     let output;
     match (privileged, writable) {
-        (true, false) => llvm_asm!("mcr p15, 0, $0, c7, c8, 0" :: "r"(virt_addr.as_u32()) :: "volatile"),
-        (true, true) => llvm_asm!("mcr p15, 0, $0, c7, c8, 1" :: "r"(virt_addr.as_u32()) :: "volatile"),
+        (true, false) => {
+            llvm_asm!("mcr p15, 0, $0, c7, c8, 0" :: "r"(virt_addr.as_u32()) :: "volatile")
+        }
+        (true, true) => {
+            llvm_asm!("mcr p15, 0, $0, c7, c8, 1" :: "r"(virt_addr.as_u32()) :: "volatile")
+        }
         (false, false) => {
             llvm_asm!("mcr p15, 0, $0, c7, c8, 2" :: "r"(virt_addr.as_u32()) :: "volatile")
         }
-        (false, true) => llvm_asm!("mcr p15, 0, $0, c7, c8, 3" :: "r"(virt_addr.as_u32()) :: "volatile"),
+        (false, true) => {
+            llvm_asm!("mcr p15, 0, $0, c7, c8, 3" :: "r"(virt_addr.as_u32()) :: "volatile")
+        }
     }
     llvm_asm!("mrc p15, 0, $0, c7, c4, 0" : "=r"(output) ::: "volatile");
     output
