@@ -16,4 +16,4 @@ keywords = ["arm", "no_std", "cortex-a"]
 register = "^0.5.0"
 
 [package.metadata.docs.rs]
-rustc-args = ["--target", "armv7a-none-eabi"]
+default-target = "x86_64-unknown-linux-gnu"
