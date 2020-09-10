@@ -48,7 +48,7 @@ impl VirtualAddress {
         Some(VirtualAddress(address))
     }
     /// Calculate for a virtual address the index in the base table
-    pub const fn base_table_index(self) -> usize {
+    pub const fn translation_table_index(self) -> usize {
         // Divide by 1Mb
         let base_addr = self.0 >> 20;
         base_addr as usize

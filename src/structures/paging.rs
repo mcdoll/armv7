@@ -1,9 +1,12 @@
 //! Module for paging related issues
 //!
-//! The pointer to the translation table base can be obtained by
+//! To create a new translation table use
 //! ```
-//!     let ttbr0_vaddr = VirtualAddress::new(0x8000_1000);
-//!     let base_table = unsafe { TranslationTable::new(ttbr0_virt) };
+//!     static mut TTBR0 = TranslationTableMemory::new();
+//! ```
+//! Create a reference
+//! ```
+//!     let base_table = TranslationTable::new(&mut TTRB0);
 //! ```
 //! To create new entries in the table, first create a new memory attribute by
 //! ```
@@ -11,17 +14,22 @@
 //! ```
 //! and then create a new section by
 //! ```
-//!     let section = TableDescriptor::new(TableType::Section, section_physical_address, attributes);
+//!     let section = TranslationTableDescriptor::new(TranslationTableType::Section, section_physical_address, attributes);
 //!     unsafe { base_table.table_mut()[index] = section };
+//! ```
+//!
+//! Finally active the translation table by
+//! ```
+//!     unsafe { base_table.set_as_ttbr0() };
 //! ```
 //!
 //! A new second level pagetable can be created by
 //! ```
-//!     let pagetable = unsafe { PageTable::new(pagetable_virtual_address, attributes, base_table, index)? };
+//!     let pagetable = unsafe { PageTable::new(&mut page_table_memory, attributes, base_table, index)? };
 //! ```
 //! A new entry in the pagetable is created by
 //! ```
-//!     let small_page = PageDescriptor::new(PageType::SmallPage, physical_address, attributes)?;
+//!     let small_page = PageTableDescriptor::new(PageTableType::SmallPage, physical_address, attributes)?;
 //!     unsafe { pagetable.table_mut()[index_pt] = small_page };
 //! ```
 
@@ -34,7 +42,7 @@ use register::{register_bitfields, FieldValue};
 
 register_bitfields! {
     u32,
-    pub ATTRIBUTES [
+    ATTRIBUTES [
         PXN OFFSET(0) NUMBITS(1) [Enable = 0b1],
         B OFFSET(2) NUMBITS(1) [Enable = 0b1],
         C OFFSET(3) NUMBITS(1) [Enable = 0b1],
@@ -78,12 +86,12 @@ pub struct MemoryAttributes(u32);
 //
 
 impl MemoryAttributes {
-    pub fn from_table_descriptor(table_descriptor: TableDescriptor) -> Option<Self> {
+    pub fn from_table_descriptor(table_descriptor: TranslationTableDescriptor) -> Option<Self> {
         let table_type = table_descriptor.get_type();
         let val = table_descriptor.0;
         let bitset = match table_type {
-            TableType::Invalid => return None,
-            TableType::Page => {
+            TranslationTableType::Invalid => return None,
+            TranslationTableType::Page => {
                 // first we copy the domain bits to our output variable
                 let mut out = val & 0x01e0;
                 // Copy PXN
@@ -92,24 +100,24 @@ impl MemoryAttributes {
                 out |= (val & 0x8) << 16;
                 out
             }
-            TableType::Section => {
+            TranslationTableType::Section => {
                 // this is easy, since we interally store the memory attributes as in the section
                 // table descriptor
                 val & 0x000b_fdfd
             }
-            TableType::Supersection => {
+            TranslationTableType::Supersection => {
                 // similar to the section, but we have to set the domain (bits 5 to 8) to zero
                 val & 0x000d_fa1d
             }
         };
         Some(MemoryAttributes(bitset))
     }
-    pub fn from_page_descriptor(page_descriptor: PageDescriptor) -> Self {
+    pub fn from_page_descriptor(page_descriptor: PageTableDescriptor) -> Self {
         let page_type = page_descriptor.get_type();
         let val = page_descriptor.0;
         match page_type {
-            PageType::Invalid => MemoryAttributes(0),
-            PageType::LargePage => {
+            PageTableType::Invalid => MemoryAttributes(0),
+            PageTableType::LargePage => {
                 // first we copy the C, B, and TEX bits to our output variable
                 let mut out = val & 0x700c;
                 // Copy AP
@@ -120,7 +128,7 @@ impl MemoryAttributes {
                 out |= (val & 0x8000) >> (15 - 4);
                 MemoryAttributes(out)
             }
-            PageType::SmallPage => {
+            PageTableType::SmallPage => {
                 // first we copy the C and B bits to our output variable
                 let mut out = val & 0b1100;
                 // Copy XN
@@ -136,18 +144,18 @@ impl MemoryAttributes {
     // internal implementation of the memory attributes.
     // The functions are not visible, because there is not use-case except for creating
     // descriptors.
-    fn to_page_descriptor(self, pagetype: PageType) -> PageDescriptor {
+    fn to_page_descriptor(self, pagetype: PageTableType) -> PageTableDescriptor {
         match pagetype {
-            PageType::Invalid => PageDescriptor(0),
-            PageType::SmallPage => {
+            PageTableType::Invalid => PageTableDescriptor(0),
+            PageTableType::SmallPage => {
                 let mut val = 0b10 | (self.0 & 0b1100);
                 // Copy XN
                 val |= (self.0 & 0x10) >> 4;
                 // Copy AP, TEX, AP2, S, and nG
                 val |= (self.0 & 0x3fc00) >> (10 - 4);
-                PageDescriptor(val)
+                PageTableDescriptor(val)
             }
-            PageType::LargePage => {
+            PageTableType::LargePage => {
                 let mut val = 0b1 | (self.0 & 0b1100);
                 // Copy AP
                 val |= (self.0 & 0xc00) >> (10 - 4);
@@ -155,22 +163,22 @@ impl MemoryAttributes {
                 val |= (self.0 & 0x38000) >> (15 - 9);
                 // Copy XN
                 val |= (self.0 & 0x10) << (15 - 4);
-                PageDescriptor(val)
+                PageTableDescriptor(val)
             }
         }
     }
-    fn to_table_descriptor(self, tabletype: TableType) -> TableDescriptor {
+    fn to_table_descriptor(self, tabletype: TranslationTableType) -> TranslationTableDescriptor {
         match tabletype {
-            TableType::Invalid => TableDescriptor(0),
-            TableType::Page => {
+            TranslationTableType::Invalid => TranslationTableDescriptor(0),
+            TranslationTableType::Page => {
                 let mut val = 1 | (self.0 & 0x1e0);
                 val |= (self.0 & 1) << 2;
-                TableDescriptor(val)
+                TranslationTableDescriptor(val)
             }
-            TableType::Section => TableDescriptor(self.0 | 0x2),
-            TableType::Supersection => {
+            TranslationTableType::Section => TranslationTableDescriptor(self.0 | 0x2),
+            TranslationTableType::Supersection => {
                 let val = 0x4_0002 | (self.0 & 0xf_fc1f);
-                TableDescriptor(val)
+                TranslationTableDescriptor(val)
             }
         }
     }
@@ -202,7 +210,7 @@ pub enum PageError {
 
 pub type Result<T> = ::core::result::Result<T, PageError>;
 
-pub trait Alignable {
+trait Alignable {
     fn is_aligned(&self, mask: u32) -> bool;
     fn check_align(&self, mask: u32) -> Result<()> {
         if self.is_aligned(mask) {
@@ -276,16 +284,16 @@ impl DeviceVmemMapper {
             MemoryAttributes::from(ATTRIBUTES::AP::PrivAccess + ATTRIBUTES::XN::Enable);
         let mut base_addr = self.base_address;
         for addr in self.device_base_addresses.iter() {
-            let bt_index = base_addr.base_table_index();
+            let tt_index = base_addr.translation_table_index();
             let device_base = PhysicalAddress::new((*addr as u32) << 24);
             // Each 16MB supersection uses 16 1MB sections
             for index in 0..15 {
-                let section = TableDescriptor::new(
-                    TableType::Section,
+                let section = TranslationTableDescriptor::new(
+                    TranslationTableType::Section,
                     device_base + 0x10_0000 * index as u32,
                     attributes,
                 )?;
-                base_table.table_mut()[bt_index + index as usize] = section;
+                base_table.table_mut()[tt_index + index as usize] = section;
             }
             // increment the base address
             base_addr += 0x0100_0000 as u32;
@@ -407,22 +415,27 @@ impl OffsetMapping {
     }
 }
 
+//
+// Translation table stuff
+//
+//
+
 #[derive(Copy, Clone, Debug, PartialEq)]
 /// Different types of entries in a translation table
-pub enum TableType {
+pub enum TranslationTableType {
     Invalid,
     Page,
     Section,
     Supersection,
 }
 
-impl TableType {
+impl TranslationTableType {
     fn align(self) -> u32 {
         match self {
-            TableType::Invalid => 0,
-            TableType::Page => 0x3ff,
-            TableType::Section => 0xf_ffff,
-            TableType::Supersection => 0xf_ffff,
+            TranslationTableType::Invalid => 0,
+            TranslationTableType::Page => 0x3ff,
+            TranslationTableType::Section => 0xf_ffff,
+            TranslationTableType::Supersection => 0xf_ffff,
         }
     }
 }
@@ -430,164 +443,79 @@ impl TableType {
 #[derive(Copy, Clone, Debug)]
 #[repr(transparent)]
 /// A descriptor for a translation table entry
-pub struct TableDescriptor(u32);
+pub struct TranslationTableDescriptor(u32);
 
-impl Alignable for TableDescriptor {
-    fn is_aligned(&self, mask: u32) -> bool {
-        (self.0 & mask) == 0
-    }
-    fn align(&mut self, mask: u32) {
-        self.0 |= !mask;
-    }
-}
-
-impl fmt::LowerHex for TableDescriptor {
+impl fmt::LowerHex for TranslationTableDescriptor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let val = self.0;
         fmt::LowerHex::fmt(&val, f)
     }
 }
 
-impl ops::BitOr<u32> for TableDescriptor {
+impl ops::BitOr<u32> for TranslationTableDescriptor {
     type Output = Self;
     fn bitor(self, rhs: u32) -> Self {
-        TableDescriptor(self.0 | rhs)
+        TranslationTableDescriptor(self.0 | rhs)
     }
 }
-impl ops::BitOrAssign<u32> for TableDescriptor {
+impl ops::BitOrAssign<u32> for TranslationTableDescriptor {
     fn bitor_assign(&mut self, rhs: u32) {
         self.0 |= rhs;
     }
 }
 
-impl TableDescriptor {
-    /// Determine the type of the table descriptor
-    pub fn get_type(self) -> TableType {
-        // starts with
-        // 0b00: invalid
-        // 0b01: page
-        // 0b1x: section or supersection
-        // Bit 18 is 0 for section and 1 for supersection
-        match self.0 & 0b11 {
-            0b00 => TableType::Invalid,
-            0b01 => TableType::Page,
-            _ => match self.0 & 0x40000 {
-                0b0 => TableType::Section,
-                _ => TableType::Supersection,
-            },
-        }
+impl TranslationTableDescriptor {
+    /// Create a new invalid table descriptor
+    pub const fn new_empty() -> Self {
+        Self(0)
     }
     /// Create a new table descriptor
     pub fn new(
-        tabletype: TableType,
+        tabletype: TranslationTableType,
         addr: PhysicalAddress,
         attributes: MemoryAttributes,
-    ) -> Result<TableDescriptor> {
-        if tabletype == TableType::Invalid {
-            return Ok(TableDescriptor(0));
+    ) -> Result<Self> {
+        if tabletype == TranslationTableType::Invalid {
+            return Ok(TranslationTableDescriptor(0));
         }
         addr.check_align(tabletype.align())?;
         let mut out = attributes.to_table_descriptor(tabletype);
         out |= addr.0;
         Ok(out)
     }
-}
-
-#[derive(Copy, Clone, Debug, PartialEq)]
-/// Different types of entries in a page table
-pub enum PageType {
-    Invalid,
-    SmallPage,
-    LargePage,
-}
-
-impl PageType {
-    fn align(self) -> u32 {
-        match self {
-            PageType::Invalid => 0,
-            PageType::SmallPage => 0xfff,
-            PageType::LargePage => 0xffff,
-        }
-    }
-}
-
-#[derive(Copy, Clone, Debug)]
-#[repr(transparent)]
-/// A descriptor for a page table entry
-pub struct PageDescriptor(u32);
-
-impl Alignable for PageDescriptor {
-    fn is_aligned(&self, mask: u32) -> bool {
-        (self.0 & mask) == 0
-    }
-    fn align(&mut self, mask: u32) {
-        self.0 |= !mask;
-    }
-}
-
-impl fmt::LowerHex for PageDescriptor {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let val = self.0;
-        fmt::LowerHex::fmt(&val, f)
-    }
-}
-
-impl ops::BitOr<u32> for PageDescriptor {
-    type Output = Self;
-    fn bitor(self, rhs: u32) -> Self {
-        PageDescriptor(self.0 | rhs)
-    }
-}
-impl ops::BitOrAssign<u32> for PageDescriptor {
-    fn bitor_assign(&mut self, rhs: u32) {
-        self.0 |= rhs;
-    }
-}
-
-impl PageDescriptor {
-    /// Construct a new page descriptor
-    pub fn new(
-        pagetype: PageType,
-        addr: PhysicalAddress,
-        attributes: MemoryAttributes,
-    ) -> Result<PageDescriptor> {
-        if pagetype == PageType::Invalid {
-            return Ok(PageDescriptor(0));
-        }
-        addr.check_align(pagetype.align())?;
-        let mut out = attributes.to_page_descriptor(pagetype);
-        out |= addr.0;
-        Ok(out)
-    }
-    /// Determine the type of the page descriptor
-    pub fn get_type(self) -> PageType {
+    /// Determine the type of the table descriptor
+    pub fn get_type(self) -> TranslationTableType {
         // starts with
-        // 0b00 Invalid
-        // 0b01 LargePage
-        // 0b1x SmallPage
+        // 0b00: invalid
+        // 0b01: page
+        // 0b1x: section or supersection
+        // Bit 18 is 0 for section and 1 for supersection
         match self.0 & 0b11 {
-            0b00 => PageType::Invalid,
-            0b01 => PageType::LargePage,
-            _ => PageType::SmallPage,
+            0b00 => TranslationTableType::Invalid,
+            0b01 => TranslationTableType::Page,
+            _ => match self.0 & 0x40000 {
+                0b0 => TranslationTableType::Section,
+                _ => TranslationTableType::Supersection,
+            },
         }
-    }
-    /// Get the physical base address the page is pointing to.
-    pub fn get_addr(self) -> Result<PhysicalAddress> {
-        let page_type = self.get_type();
-        if page_type == PageType::Invalid {
-            return Err(PageError::InvalidMemory);
-        }
-        let strip_addr = self.0 & (!page_type.align());
-        Ok(PhysicalAddress(strip_addr))
     }
 }
 
 pub const TRANSLATION_TABLE_SIZE: usize = 4096; // each section is 1MB big; 4GB / 1MB is 4096
-pub const PAGE_TABLE_SIZE: usize = 256; // 4Kb * 256 = 1Mb
 
-#[repr(transparent)]
-struct TranslationTableMemory {
-    table: [TableDescriptor; TRANSLATION_TABLE_SIZE],
+#[repr(C)]
+#[repr(align(16384))]
+/// Base level translation table memory
+pub struct TranslationTableMemory {
+    table: [TranslationTableDescriptor; TRANSLATION_TABLE_SIZE],
+}
+
+impl TranslationTableMemory {
+    pub const fn new() -> Self {
+        Self {
+            table: [TranslationTableDescriptor::new_empty(); TRANSLATION_TABLE_SIZE],
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -598,23 +526,42 @@ pub struct TranslationTable {
 
 impl TranslationTable {
     /// Create a pointer to a base table from a virtual address
+    pub const fn new(pointer: *mut TranslationTableMemory) -> Self {
+        Self { pointer }
+    }
+    /// Registers the translation page table as ttbr0
     ///
     /// # Safety
-    /// The caller must garantee that the virtual address maps to a base table
-    pub unsafe fn new(virt_addr: VirtualAddress) -> Result<Self> {
-        virt_addr.check_align(0x3fff)?;
-        Ok(TranslationTable {
-            pointer: virt_addr.as_u32() as *mut _,
-        })
+    /// The caller must garantee that the new translation page table is valid
+    pub unsafe fn set_as_ttbr0(&self) -> Result<()> {
+        let virt_addr = VirtualAddress::from_ptr(self.pointer);
+        let phys_addr = get_phys_addr(virt_addr)?;
+        TTBR0.set(phys_addr.as_u32());
+        arm::__nop();
+        arm::__nop();
+        arm::__nop();
+        Ok(())
     }
 
     /// This functions is deprecated since it assumes that the ttbr0 is on indentity-mapped memory
     /// address
+    /// Resolution: Use get_phys_addr() and convert it to a virtual memory address
     pub fn get_current_ttbr0() -> Self {
         let ttbr0 = TTBR0.get() & !0x3fff;
         TranslationTable {
             pointer: ttbr0 as *mut _,
         }
+    }
+    /// Get the ttbr0 translation table
+    pub fn get_ttbr0(offset_mapping: OffsetMapping) -> Result<Self> {
+        let phys_addr = Self::get_ttbr0_phys();
+        let virt_addr = offset_mapping.convert_phys_addr(phys_addr)?;
+        Ok(Self::new(virt_addr.as_mut_ptr()))
+    }
+
+    /// Returns the physical address of the translation page table
+    pub fn get_ttbr0_phys() -> PhysicalAddress {
+        PhysicalAddress::new(TTBR0.get() & !0x3fff)
     }
 
     /// Mutable reference to the translation table
@@ -622,33 +569,16 @@ impl TranslationTable {
     /// # Safety
     /// The caller must ensure that all entries are valid and don't interfere with memory layout of
     /// the program
-    pub unsafe fn table_mut(&mut self) -> &mut [TableDescriptor; TRANSLATION_TABLE_SIZE] {
+    pub unsafe fn table_mut(
+        &mut self,
+    ) -> &mut [TranslationTableDescriptor; TRANSLATION_TABLE_SIZE] {
         &mut (*self.pointer).table
     }
 
     /// Immutable reference to the translation table
     ///
-    pub fn table(&self) -> &[TableDescriptor; TRANSLATION_TABLE_SIZE] {
+    pub fn table(&self) -> &[TranslationTableDescriptor; TRANSLATION_TABLE_SIZE] {
         unsafe { &(*self.pointer).table }
-    }
-
-    /// Returns the physical address of the translation page table
-    pub fn get_phys_addr() -> PhysicalAddress {
-        PhysicalAddress::new(TTBR0.get() & !0x3fff)
-    }
-
-    /// Sets a new translation page table
-    ///
-    /// # Safety
-    /// The caller must garantee that the new translation page table is valid
-    pub unsafe fn set_phys_addr(base_addr: PhysicalAddress) -> Result<()> {
-        //use crate::regs::ttbr::*;
-        base_addr.check_align(0x3fff)?;
-        TTBR0.set(base_addr.as_u32());
-        arm::__nop();
-        arm::__nop();
-        arm::__nop();
-        Ok(())
     }
 }
 
@@ -659,37 +589,134 @@ impl fmt::LowerHex for TranslationTable {
     }
 }
 
+//
+// Page table stuff
+//
+//
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+/// Different types of entries in a page table
+pub enum PageTableType {
+    Invalid,
+    SmallPage,
+    LargePage,
+}
+
+impl PageTableType {
+    fn align(self) -> u32 {
+        match self {
+            PageTableType::Invalid => 0,
+            PageTableType::SmallPage => 0xfff,
+            PageTableType::LargePage => 0xffff,
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
 #[repr(transparent)]
-struct PageTableMemory {
-    table: [PageDescriptor; PAGE_TABLE_SIZE],
+/// A descriptor for a page table entry
+pub struct PageTableDescriptor(u32);
+
+impl fmt::LowerHex for PageTableDescriptor {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let val = self.0;
+        fmt::LowerHex::fmt(&val, f)
+    }
+}
+
+impl ops::BitOr<u32> for PageTableDescriptor {
+    type Output = Self;
+    fn bitor(self, rhs: u32) -> Self {
+        PageTableDescriptor(self.0 | rhs)
+    }
+}
+impl ops::BitOrAssign<u32> for PageTableDescriptor {
+    fn bitor_assign(&mut self, rhs: u32) {
+        self.0 |= rhs;
+    }
+}
+
+impl PageTableDescriptor {
+    /// Construct a new invalid page descriptor
+    pub const fn new_empty() -> PageTableDescriptor {
+        PageTableDescriptor(0)
+    }
+    /// Construct a new page descriptor
+    pub fn new(
+        pagetype: PageTableType,
+        addr: PhysicalAddress,
+        attributes: MemoryAttributes,
+    ) -> Result<PageTableDescriptor> {
+        if pagetype == PageTableType::Invalid {
+            return Ok(PageTableDescriptor(0));
+        }
+        addr.check_align(pagetype.align())?;
+        let mut out = attributes.to_page_descriptor(pagetype);
+        out |= addr.0;
+        Ok(out)
+    }
+    /// Determine the type of the page descriptor
+    pub fn get_type(self) -> PageTableType {
+        // starts with
+        // 0b00 Invalid
+        // 0b01 LargePage
+        // 0b1x SmallPage
+        match self.0 & 0b11 {
+            0b00 => PageTableType::Invalid,
+            0b01 => PageTableType::LargePage,
+            _ => PageTableType::SmallPage,
+        }
+    }
+    /// Get the physical base address the page is pointing to.
+    pub fn get_addr(self) -> Result<PhysicalAddress> {
+        let page_type = self.get_type();
+        if page_type == PageTableType::Invalid {
+            return Err(PageError::InvalidMemory);
+        }
+        let strip_addr = self.0 & (!page_type.align());
+        Ok(PhysicalAddress(strip_addr))
+    }
+}
+
+pub const PAGE_TABLE_SIZE: usize = 256; // each page is 4Kb, section is 1MB; 1Mb / 4Kb = 256
+
+#[repr(C)]
+#[repr(align(1024))]
+/// Second level page table memory
+pub struct PageTableMemory {
+    table: [PageTableDescriptor; PAGE_TABLE_SIZE],
+}
+impl PageTableMemory {
+    pub const fn new() -> Self {
+        Self {
+            table: [PageTableDescriptor::new_empty(); PAGE_TABLE_SIZE],
+        }
+    }
 }
 
 #[derive(Debug)]
 /// Second level page table
 pub struct PageTable {
     pointer: *mut PageTableMemory,
-    descriptor: TableDescriptor,
+    descriptor: TranslationTableDescriptor,
 }
 
 impl PageTable {
-    /// Creates a page table at a given virtual address
+    /// Creates a page table and registers it in the translation table at a given index
     ///
     /// # Safety
-    /// The caller must garantee that the virtual address is mapped to a valid physical address in
-    /// RAM.
-    ///
-    /// Moreover any interaction with the pagetable is unsafe as it might corrupt data rust is
+    /// Any interaction with the translation table is unsafe as it might corrupt data rust is
     /// interacting with.
     pub unsafe fn new(
-        virt_addr: VirtualAddress,
+        pointer: *mut PageTableMemory,
         mem_attributes: MemoryAttributes,
         base_table: &mut TranslationTable,
         index: usize,
     ) -> Result<Self> {
-        virt_addr.check_align(0x3ff)?;
-        let pointer = virt_addr.as_u32() as *mut PageTableMemory;
+        let virt_addr = VirtualAddress::from_mut_ptr(pointer);
         let phys_addr = get_phys_addr(virt_addr)?;
-        let descriptor = TableDescriptor::new(TableType::Page, phys_addr, mem_attributes)?;
+        let descriptor =
+            TranslationTableDescriptor::new(TranslationTableType::Page, phys_addr, mem_attributes)?;
         base_table.table_mut()[index] = descriptor;
         let page_table = PageTable {
             pointer,
@@ -702,11 +729,11 @@ impl PageTable {
     /// # Safety
     /// The caller must ensure that all entries are valid and don't interfere with memory layout of
     /// the program
-    pub unsafe fn table_mut(&mut self) -> &mut [PageDescriptor; PAGE_TABLE_SIZE] {
+    pub unsafe fn table_mut(&mut self) -> &mut [PageTableDescriptor; PAGE_TABLE_SIZE] {
         &mut (*self.pointer).table
     }
     /// Immutable reference to the page table
-    pub fn table(&self) -> &[PageDescriptor; PAGE_TABLE_SIZE] {
+    pub fn table(&self) -> &[PageTableDescriptor; PAGE_TABLE_SIZE] {
         unsafe { &(*self.pointer).table }
     }
 }
