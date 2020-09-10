@@ -1,13 +1,19 @@
 [package]
 name = "armv7"
 description = "Low level routines for the armv7 instruction set with VMSA"
-version = "0.1.0"
+version = "0.2.0"
 repository = "https://github.com/mcdoll/armv7"
 license = "MIT"
 authors = ["Moritz Doll"]
 edition = "2018"
+readme = "README.md"
+categories = ["embedded", "hardware-support", "no-std"]
+keywords = ["arm", "no_std", "cortex-a"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 register = "^0.5.0"
+
+[package.metadata.docs.rs]
+rustc-args = ["--target", "armv7a-none-eabi"]
