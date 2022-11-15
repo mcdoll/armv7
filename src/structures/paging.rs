@@ -35,7 +35,8 @@
 
 use crate::regs::vmem_control::*;
 use crate::{PhysicalAddress, VirtualAddress};
-use core::arch::arm;
+
+use core::arch::asm;
 use core::fmt;
 use core::ops;
 use register::{register_bitfields, FieldValue};
@@ -327,16 +328,16 @@ unsafe fn get_phys_frame(virt_addr: VirtualAddress, privileged: bool, writable: 
     let output;
     match (privileged, writable) {
         (true, false) => {
-            llvm_asm!("mcr p15, 0, $0, c7, c8, 0" :: "r"(virt_addr.as_u32()) :: "volatile")
+            asm!("mcr p15, 0, {}, c7, c8, 0", in(reg) virt_addr.as_u32())
         }
         (true, true) => {
-            llvm_asm!("mcr p15, 0, $0, c7, c8, 1" :: "r"(virt_addr.as_u32()) :: "volatile")
+            asm!("mcr p15, 0, {}, c7, c8, 1", in(reg) virt_addr.as_u32())
         }
         (false, false) => {
-            llvm_asm!("mcr p15, 0, $0, c7, c8, 2" :: "r"(virt_addr.as_u32()) :: "volatile")
+            asm!("mcr p15, 0, {}, c7, c8, 2", in(reg) virt_addr.as_u32())
         }
         (false, true) => {
-            llvm_asm!("mcr p15, 0, $0, c7, c8, 3" :: "r"(virt_addr.as_u32()) :: "volatile")
+            asm!("mcr p15, 0, {}, c7, c8, 3", in(reg) virt_addr.as_u32())
         }
     }
     llvm_asm!("mrc p15, 0, $0, c7, c4, 0" : "=r"(output) ::: "volatile");
@@ -537,9 +538,9 @@ impl TranslationTable {
         let virt_addr = VirtualAddress::from_ptr(self.pointer);
         let phys_addr = get_phys_addr(virt_addr)?;
         TTBR0.set(phys_addr.as_u32());
-        arm::__nop();
-        arm::__nop();
-        arm::__nop();
+        asm!("nop");
+        asm!("nop");
+        asm!("nop");
         Ok(())
     }
 
