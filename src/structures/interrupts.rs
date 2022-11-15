@@ -1,10 +1,12 @@
 //! Module for creating interrupt handlers
+use core::ops;
+use tock_registers::interfaces::{Readable, Writeable};
 
 use crate::regs::security::*;
 use crate::regs::vmem_control::*;
 use crate::VirtualAddress;
-use core::ops;
-use register::mmio::*;
+
+use tock_registers::registers::ReadWrite;
 
 #[repr(C)]
 struct RegisterBlock {
@@ -73,7 +75,7 @@ impl VectorTable {
     /// Creates a pointer to the vector table as set in the system registers
     ///
     /// # Safety
-    /// The caller has to garantee that the address set in the SCTLR.V register or in the VBAR
+    /// The caller has to guarantee that the address set in the SCTLR.V register or in the VBAR
     /// register points to valid memory
     pub fn new() -> Self {
         let mem = VectorTableMemory::new();

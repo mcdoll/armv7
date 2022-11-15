@@ -1,8 +1,8 @@
 //! Register access to the core registers
 
-use register::cpu::RegisterReadWrite;
-use register::InMemoryRegister;
-use register::*;
+use tock_registers::interfaces::{Writeable, Readable};
+use tock_registers::RegisterLongName;
+use tock_registers::registers::InMemoryRegister;
 
 use crate::regs::program_state::PSR;
 use crate::VirtualAddress;
@@ -12,18 +12,35 @@ use crate::fmt;
 pub struct ProgramCounter;
 pub struct StackPointer;
 
-impl RegisterReadWrite<u32, ()> for ProgramCounter {
+impl Readable for ProgramCounter {
+    type T = u32;
+    type R = ();
+
     read_raw!(u32, "pc");
+}
+
+impl Writeable for ProgramCounter {
+    type T = u32;
+    type R = ();
+
     write_raw!(u32, "pc");
 }
 
-impl RegisterReadWrite<u32, ()> for StackPointer {
+impl Readable for StackPointer {
+    type T = u32;
+    type R = ();
+
     read_raw!(u32, "sp");
+}
+
+impl Writeable for StackPointer {
+    type T = u32;
+    type R = ();
+
     write_raw!(u32, "sp");
 }
 
 #[repr(transparent)]
-#[derive(Copy, Clone)]
 pub struct MemoryRegister<R: RegisterLongName>(InMemoryRegister<u32, R>);
 
 impl<R: RegisterLongName> MemoryRegister<R> {
@@ -38,7 +55,7 @@ impl<R: RegisterLongName> fmt::Debug for MemoryRegister<R> {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone, Debug)]
+#[derive(Debug)]
 pub struct CoreRegisters {
     pub r0: MemoryRegister<()>,             // 0x00
     pub r1: MemoryRegister<()>,             // 0x04

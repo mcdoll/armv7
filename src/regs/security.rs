@@ -2,7 +2,7 @@
 //!
 //! Functional group according to the ARM ARM
 
-use register::cpu::*;
+use tock_registers::interfaces::{Writeable, Readable};
 
 pub struct InterruptStatus;
 pub struct MonitorVectorBaseAddress;
@@ -11,32 +11,80 @@ pub struct SecureConfiguration;
 pub struct SecureDebugEnable;
 pub struct VectorBaseAddress;
 
-impl RegisterReadOnly<u32, ()> for InterruptStatus {
+impl Readable for InterruptStatus {
+    type T = u32;
+    type R = ();
+
     sys_coproc_read_raw!(u32, "p15", "c12", "c1", "0", "0");
 }
 
-impl RegisterReadWrite<u32, ()> for MonitorVectorBaseAddress {
+impl Readable for MonitorVectorBaseAddress {
+    type T = u32;
+    type R = ();
+
     sys_coproc_read_raw!(u32, "p15", "c12", "c0", "0", "1");
+}
+
+impl Writeable for MonitorVectorBaseAddress {
+    type T = u32;
+    type R = ();
+
     sys_coproc_write_raw!(u32, "p15", "c12", "c0", "0", "1");
 }
 
-impl RegisterReadWrite<u32, ()> for NonSecureAccessControl {
+impl Readable for NonSecureAccessControl {
+    type T = u32;
+    type R = ();
+
     sys_coproc_read_raw!(u32, "p15", "c1", "c1", "0", "2");
+}
+
+impl Writeable for NonSecureAccessControl {
+    type T = u32;
+    type R = ();
+
     sys_coproc_write_raw!(u32, "p15", "c1", "c1", "0", "2");
 }
 
-impl RegisterReadWrite<u32, ()> for SecureConfiguration {
+impl Readable for SecureConfiguration {
+    type T = u32;
+    type R = ();
+
     sys_coproc_read_raw!(u32, "p15", "c1", "c1", "0", "0");
+}
+
+impl Writeable for SecureConfiguration {
+    type T = u32;
+    type R = ();
+
     sys_coproc_write_raw!(u32, "p15", "c1", "c1", "0", "0");
 }
 
-impl RegisterReadWrite<u32, ()> for SecureDebugEnable {
+impl Readable for SecureDebugEnable {
+    type T = u32;
+    type R = ();
+
     sys_coproc_read_raw!(u32, "p15", "c1", "c1", "0", "1");
+}
+
+impl Writeable for SecureDebugEnable {
+    type T = u32;
+    type R = ();
+
     sys_coproc_write_raw!(u32, "p15", "c1", "c1", "0", "1");
 }
 
-impl RegisterReadWrite<u32, ()> for VectorBaseAddress {
+impl Readable for VectorBaseAddress {
+    type T = u32;
+    type R = ();
+
     sys_coproc_read_raw!(u32, "p15", "c12", "c0", "0", "0");
+}
+
+impl Writeable for VectorBaseAddress {
+    type T = u32;
+    type R = ();
+
     sys_coproc_write_raw!(u32, "p15", "c12", "c0", "0", "0");
 }
 

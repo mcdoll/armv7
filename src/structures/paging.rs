@@ -39,7 +39,10 @@ use crate::{PhysicalAddress, VirtualAddress};
 use core::arch::asm;
 use core::fmt;
 use core::ops;
-use register::{register_bitfields, FieldValue};
+
+use tock_registers::fields::FieldValue;
+use tock_registers::interfaces::{Readable, Writeable};
+use tock_registers::register_bitfields;
 
 register_bitfields! {
     u32,
@@ -209,7 +212,7 @@ pub enum PageError {
     IndexError,
 }
 
-pub type Result<T> = ::core::result::Result<T, PageError>;
+pub type Result<T> = core::result::Result<T, PageError>;
 
 trait Alignable {
     fn is_aligned(&self, mask: u32) -> bool;
@@ -340,7 +343,7 @@ unsafe fn get_phys_frame(virt_addr: VirtualAddress, privileged: bool, writable: 
             asm!("mcr p15, 0, {}, c7, c8, 3", in(reg) virt_addr.as_u32())
         }
     }
-    llvm_asm!("mrc p15, 0, $0, c7, c4, 0" : "=r"(output) ::: "volatile");
+    asm!("mrc p15, 0, {}, c7, c4, 0", out(reg) output);
     output
 }
 
@@ -642,6 +645,7 @@ impl PageTableDescriptor {
     pub const fn new_empty() -> PageTableDescriptor {
         PageTableDescriptor(0)
     }
+
     /// Construct a new page descriptor
     pub fn new(
         pagetype: PageTableType,
@@ -656,6 +660,7 @@ impl PageTableDescriptor {
         out |= addr.0;
         Ok(out)
     }
+
     /// Determine the type of the page descriptor
     pub fn get_type(self) -> PageTableType {
         // starts with
@@ -668,12 +673,14 @@ impl PageTableDescriptor {
             _ => PageTableType::SmallPage,
         }
     }
+
     /// Get the physical base address the page is pointing to.
     pub fn get_addr(self) -> Result<PhysicalAddress> {
         let page_type = self.get_type();
         if page_type == PageTableType::Invalid {
             return Err(PageError::InvalidMemory);
         }
+
         let strip_addr = self.0 & (!page_type.align());
         Ok(PhysicalAddress(strip_addr))
     }
@@ -699,6 +706,8 @@ impl PageTableMemory {
 /// Second level page table
 pub struct PageTable {
     pointer: *mut PageTableMemory,
+
+    #[allow(dead_code)]
     descriptor: TranslationTableDescriptor,
 }
 

@@ -4,7 +4,7 @@
 //! You should consider using structures::paging::get_phys_frame
 //! instead of this module
 
-use register::cpu::{RegisterReadWrite, RegisterWriteOnly};
+use tock_registers::interfaces::{Readable, Writeable};
 
 pub struct Stage1CurrentStatePL1Read;
 pub struct Stage1CurrentStatePL1Write;
@@ -12,24 +12,45 @@ pub struct Stage1CurrentStateUnpriviledgedRead;
 pub struct Stage1CurrentStateUnpriviledgedWrite;
 pub struct PhysicalAddress;
 
-impl RegisterWriteOnly<u32, ()> for Stage1CurrentStatePL1Read {
+impl Writeable for Stage1CurrentStatePL1Read {
+    type T = u32;
+    type R = ();
+
     sys_coproc_write_raw!(u32, "p15", "c7", "c8", "0", "0");
 }
 
-impl RegisterWriteOnly<u32, ()> for Stage1CurrentStatePL1Write {
+impl Writeable for Stage1CurrentStatePL1Write {
+    type T = u32;
+    type R = ();
+
     sys_coproc_write_raw!(u32, "p15", "c7", "c8", "0", "1");
 }
 
-impl RegisterWriteOnly<u32, ()> for Stage1CurrentStateUnpriviledgedRead {
+impl Writeable for Stage1CurrentStateUnpriviledgedRead {
+    type T = u32;
+    type R = ();
+
     sys_coproc_write_raw!(u32, "p15", "c7", "c8", "0", "2");
 }
 
-impl RegisterWriteOnly<u32, ()> for Stage1CurrentStateUnpriviledgedWrite {
+impl Writeable for Stage1CurrentStateUnpriviledgedWrite {
+    type T = u32;
+    type R = ();
+
     sys_coproc_write_raw!(u32, "p15", "c7", "c8", "0", "3");
 }
 
-impl RegisterReadWrite<u32, ()> for PhysicalAddress {
+impl Readable for PhysicalAddress {
+    type T = u32;
+    type R = ();
+
     sys_coproc_read_raw!(u32, "p15", "c7", "c4", "0", "0");
+}
+
+impl Writeable for PhysicalAddress {
+    type T = u32;
+    type R = ();
+
     sys_coproc_write_raw!(u32, "p15", "c7", "c4", "0", "0");
 }
 

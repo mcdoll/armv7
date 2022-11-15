@@ -13,4 +13,3 @@ pub mod program_state;
 pub mod security;
 pub mod vmem_control;
 
-pub use register::cpu::*;

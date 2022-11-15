@@ -14,8 +14,8 @@
 //!     SCTLR.modify(SCTLR::MMU::Enable);
 //! ```
 
-pub use register::cpu::RegisterReadWrite;
-use register::register_bitfields;
+use tock_registers::interfaces::{Readable, Writeable};
+use tock_registers::register_bitfields;
 
 register_bitfields! {u32,
     pub SCTLR [
@@ -37,18 +37,47 @@ pub struct SystemControl;
 pub struct TranslationTableBase0;
 pub struct TranslationTableBase1;
 
-impl RegisterReadWrite<u32, SCTLR::Register> for SystemControl {
+impl Readable for SystemControl {
+    type T = u32;
+    type R = SCTLR::Register;
+
     sys_coproc_read_raw!(u32, "p15", "c1", "c0", "0", "0");
+}
+
+impl Writeable for SystemControl {
+    type T = u32;
+    type R = SCTLR::Register;
+
     sys_coproc_write_raw!(u32, "p15", "c1", "c0", "0", "0");
 }
-impl RegisterReadWrite<u32, ()> for TranslationTableBase0 {
+
+impl Readable for TranslationTableBase0 {
+    type T = u32;
+    type R = ();
+
     sys_coproc_read_raw!(u32, "p15", "c2", "c0", "0", "0");
+}
+
+impl Writeable for TranslationTableBase0 {
+    type T = u32;
+    type R = ();
+
     sys_coproc_write_raw!(u32, "p15", "c2", "c0", "0", "0");
 }
 
-impl RegisterReadWrite<u32, ()> for TranslationTableBase1 {
+impl Readable for TranslationTableBase1 {
+    type T = u32;
+    type R = ();
+
     sys_coproc_read_raw!(u32, "p15", "c2", "c0", "0", "1");
+}
+
+impl Writeable for TranslationTableBase1 {
+    type T = u32;
+    type R = ();
+
     sys_coproc_write_raw!(u32, "p15", "c2", "c0", "0", "1");
+
 }
 
 /// Public interface for the SCTLR

@@ -2,8 +2,8 @@
 //!
 //! # Usage examples
 
-pub use register::cpu::RegisterReadWrite;
-use register::register_bitfields;
+use tock_registers::interfaces::{Readable, Writeable};
+use tock_registers::register_bitfields;
 
 register_bitfields! {u32,
     pub DFS [
@@ -21,12 +21,31 @@ pub struct DataFaultStatus;
 pub struct InstructionFaultAddress;
 pub struct InstructionFaultStatus;
 
-impl RegisterReadWrite<u32, ()> for DataFaultAddress {
+impl Readable for DataFaultAddress {
+    type T = u32;
+    type R = ();
+
     sys_coproc_read_raw!(u32, "p15", "c6", "c0", "0", "0");
+}
+
+impl Writeable for DataFaultAddress {
+    type T = u32;
+    type R = ();
+
     sys_coproc_write_raw!(u32, "p15", "c6", "c0", "0", "0");
 }
-impl RegisterReadWrite<u32, DFS::Register> for DataFaultStatus {
+
+impl Readable for DataFaultStatus {
+    type T = u32;
+    type R = DFS::Register;
+
     sys_coproc_read_raw!(u32, "p15", "c5", "c0", "0", "0");
+}
+
+impl Writeable for DataFaultStatus {
+    type T = u32;
+    type R = DFS::Register;
+
     sys_coproc_write_raw!(u32, "p15", "c5", "c0", "0", "0");
 }
 
