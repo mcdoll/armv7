@@ -77,7 +77,6 @@ impl Writeable for TranslationTableBase1 {
     type R = ();
 
     sys_coproc_write_raw!(u32, "p15", "c2", "c0", "0", "1");
-
 }
 
 /// Public interface for the SCTLR

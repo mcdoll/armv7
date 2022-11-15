@@ -1,8 +1,8 @@
 //! Register access to the core registers
 
-use tock_registers::interfaces::{Writeable, Readable};
-use tock_registers::RegisterLongName;
+use tock_registers::interfaces::{Readable, Writeable};
 use tock_registers::registers::InMemoryRegister;
+use tock_registers::RegisterLongName;
 
 use crate::regs::program_state::PSR;
 use crate::VirtualAddress;

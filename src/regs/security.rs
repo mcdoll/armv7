@@ -2,7 +2,7 @@
 //!
 //! Functional group according to the ARM ARM
 
-use tock_registers::interfaces::{Writeable, Readable};
+use tock_registers::interfaces::{Readable, Writeable};
 
 pub struct InterruptStatus;
 pub struct MonitorVectorBaseAddress;

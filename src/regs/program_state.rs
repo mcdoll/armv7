@@ -16,7 +16,7 @@
 
 use core::fmt;
 use tock_registers::fields::FieldValue;
-use tock_registers::interfaces::{Readable, ReadWriteable, Writeable};
+use tock_registers::interfaces::{ReadWriteable, Readable, Writeable};
 use tock_registers::register_bitfields;
 
 register_bitfields! {u32,
