@@ -1,14 +1,10 @@
 //! Crate for low-level armv7 routines
 
-#![feature(llvm_asm)]
-#![feature(stdsimd)]
 #![no_std]
-#![feature(const_fn)]
 
 use core::fmt;
 use core::ops::{Add, AddAssign, BitOr, Sub, SubAssign};
 
-//pub mod asm;
 pub mod regs;
 pub mod structures;
 
