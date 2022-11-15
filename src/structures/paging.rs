@@ -66,7 +66,7 @@ register_bitfields! {
     ]
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
 #[repr(transparent)]
 /// This struct contains all the possible memory attributes of various page types
 pub struct MemoryAttributes(u32);
@@ -195,12 +195,6 @@ impl From<FieldValue<u32, ATTRIBUTES::Register>> for MemoryAttributes {
     }
 }
 
-impl Default for MemoryAttributes {
-    fn default() -> Self {
-        MemoryAttributes(0)
-    }
-}
-
 #[derive(Debug, Copy, Clone)]
 pub enum PageError {
     AlignError,
@@ -300,7 +294,7 @@ impl DeviceVmemMapper {
                 base_table.table_mut()[tt_index + index as usize] = section;
             }
             // increment the base address
-            base_addr += 0x0100_0000 as u32;
+            base_addr += 0x0100_0000_u32;
         }
         Ok(())
     }
@@ -424,7 +418,7 @@ impl OffsetMapping {
 //
 //
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 /// Different types of entries in a translation table
 pub enum TranslationTableType {
     Invalid,
@@ -598,7 +592,7 @@ impl fmt::LowerHex for TranslationTable {
 //
 //
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 /// Different types of entries in a page table
 pub enum PageTableType {
     Invalid,
