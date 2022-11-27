@@ -8,8 +8,8 @@ use tock_registers::interfaces::{Readable, Writeable};
 
 pub struct Stage1CurrentStatePL1Read;
 pub struct Stage1CurrentStatePL1Write;
-pub struct Stage1CurrentStateUnpriviledgedRead;
-pub struct Stage1CurrentStateUnpriviledgedWrite;
+pub struct Stage1CurrentStateUnprivilegedRead;
+pub struct Stage1CurrentStateUnprivilegedWrite;
 pub struct PhysicalAddress;
 
 impl Writeable for Stage1CurrentStatePL1Read {
@@ -26,14 +26,14 @@ impl Writeable for Stage1CurrentStatePL1Write {
     sys_coproc_write_raw!(u32, "p15", "c7", "c8", "0", "1");
 }
 
-impl Writeable for Stage1CurrentStateUnpriviledgedRead {
+impl Writeable for Stage1CurrentStateUnprivilegedRead {
     type T = u32;
     type R = ();
 
     sys_coproc_write_raw!(u32, "p15", "c7", "c8", "0", "2");
 }
 
-impl Writeable for Stage1CurrentStateUnpriviledgedWrite {
+impl Writeable for Stage1CurrentStateUnprivilegedWrite {
     type T = u32;
     type R = ();
 
@@ -59,9 +59,9 @@ pub static ATS1CPR: Stage1CurrentStatePL1Read = Stage1CurrentStatePL1Read {};
 /// Public interface for the ATS1CPW
 pub static ATS1CPW: Stage1CurrentStatePL1Write = Stage1CurrentStatePL1Write {};
 /// Public interface for the ATS1CUR
-pub static ATS1CUR: Stage1CurrentStateUnpriviledgedRead = Stage1CurrentStateUnpriviledgedRead {};
+pub static ATS1CUR: Stage1CurrentStateUnprivilegedRead = Stage1CurrentStateUnprivilegedRead {};
 /// Public interface for the ATS1CUW
-pub static ATS1CUW: Stage1CurrentStateUnpriviledgedWrite = Stage1CurrentStateUnpriviledgedWrite {};
+pub static ATS1CUW: Stage1CurrentStateUnprivilegedWrite = Stage1CurrentStateUnprivilegedWrite {};
 
 /// Public interface for the PAR
 pub static PAR: PhysicalAddress = PhysicalAddress {};

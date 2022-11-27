@@ -114,7 +114,6 @@ impl CoreRegisters {
         //let psr_reg = InMemoryRegister::new(self.psr);
         self.psr.0.read_as_enum(PSR::MODE)
     }
-    //
 }
 
 /// Program counter
