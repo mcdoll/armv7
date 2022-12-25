@@ -18,9 +18,7 @@ pub fn nop() {
     // NOTE: This is a `pure` asm block, but applying that option allows the compiler to eliminate
     // the nop entirely (or to collapse multiple subsequent ones). Since the user probably wants N
     // nops when they call `nop` N times, let's not add that option.
-    unsafe {
-        asm!("nop", options(nomem, nostack, preserves_flags))
-    };
+    unsafe { asm!("nop", options(nomem, nostack, preserves_flags)) };
 }
 
 /// Generate an Undefined Instruction exception.
@@ -56,9 +54,7 @@ pub fn sev() {
 #[inline(always)]
 pub fn isb() {
     compiler_fence(Ordering::SeqCst);
-    unsafe {
-        asm!("isb", options(nomem, nostack, preserves_flags))
-    };
+    unsafe { asm!("isb", options(nomem, nostack, preserves_flags)) };
     compiler_fence(Ordering::SeqCst);
 }
 
@@ -72,9 +68,7 @@ pub fn isb() {
 #[inline(always)]
 pub fn dsb() {
     compiler_fence(Ordering::SeqCst);
-    unsafe {
-        asm!("dsb", options(nomem, nostack, preserves_flags))
-    };
+    unsafe { asm!("dsb", options(nomem, nostack, preserves_flags)) };
     compiler_fence(Ordering::SeqCst);
 }
 
@@ -86,8 +80,6 @@ pub fn dsb() {
 #[inline(always)]
 pub fn dmb() {
     compiler_fence(Ordering::SeqCst);
-    unsafe {
-        asm!("dmb", options(nomem, nostack, preserves_flags))
-    };
+    unsafe { asm!("dmb", options(nomem, nostack, preserves_flags)) };
     compiler_fence(Ordering::SeqCst);
 }

@@ -46,7 +46,7 @@ use tock_registers::register_bitfields;
 
 register_bitfields! {
     u32,
-    ATTRIBUTES [
+    pub ATTRIBUTES [
         PXN OFFSET(0) NUMBITS(1) [Enable = 0b1],
         B OFFSET(2) NUMBITS(1) [Enable = 0b1],
         C OFFSET(3) NUMBITS(1) [Enable = 0b1],
@@ -192,6 +192,18 @@ impl From<FieldValue<u32, ATTRIBUTES::Register>> for MemoryAttributes {
     fn from(attributes: FieldValue<u32, ATTRIBUTES::Register>) -> Self {
         let attributes_u32 = u32::from(attributes);
         MemoryAttributes(attributes_u32)
+    }
+}
+
+impl ops::BitOr<u32> for MemoryAttributes {
+    type Output = Self;
+    fn bitor(self, rhs: u32) -> Self {
+        MemoryAttributes(self.0 | rhs)
+    }
+}
+impl ops::BitOrAssign<u32> for MemoryAttributes {
+    fn bitor_assign(&mut self, rhs: u32) {
+        self.0 |= rhs;
     }
 }
 
@@ -443,6 +455,13 @@ impl TranslationTableType {
 /// A descriptor for a translation table entry
 pub struct TranslationTableDescriptor(u32);
 
+impl fmt::Binary for TranslationTableDescriptor {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let val = self.0;
+        fmt::Binary::fmt(&val, f)
+    }
+}
+
 impl fmt::LowerHex for TranslationTableDescriptor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let val = self.0;
@@ -496,6 +515,16 @@ impl TranslationTableDescriptor {
                 _ => TranslationTableType::Supersection,
             },
         }
+    }
+
+    pub fn get_addr(&self) -> Result<PhysicalAddress> {
+        let entry_type = self.get_type();
+        if entry_type == TranslationTableType::Invalid {
+            return Err(PageError::InvalidMemory);
+        }
+
+        let strip_addr = self.0 & (!entry_type.align());
+        Ok(PhysicalAddress(strip_addr))
     }
 }
 
@@ -622,6 +651,13 @@ impl fmt::LowerHex for PageTableDescriptor {
     }
 }
 
+impl fmt::Binary for PageTableDescriptor {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let val = self.0;
+        fmt::Binary::fmt(&val, f)
+    }
+}
+
 impl ops::BitOr<u32> for PageTableDescriptor {
     type Output = Self;
     fn bitor(self, rhs: u32) -> Self {
@@ -702,7 +738,7 @@ pub struct PageTable {
     pointer: *mut PageTableMemory,
 
     #[allow(dead_code)]
-    descriptor: TranslationTableDescriptor,
+    descriptor: Option<TranslationTableDescriptor>,
 }
 
 impl PageTable {
@@ -724,10 +760,18 @@ impl PageTable {
         base_table.table_mut()[index] = descriptor;
         let page_table = PageTable {
             pointer,
-            descriptor,
+            descriptor: Some(descriptor),
         };
         Ok(page_table)
     }
+
+    pub unsafe fn new_from_ptr(pointer: *mut PageTableMemory) -> Self {
+        Self {
+            pointer,
+            descriptor: None,
+        }
+    }
+
     /// Mutable reference to the page table
     ///
     /// # Safety
