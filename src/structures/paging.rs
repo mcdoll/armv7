@@ -40,8 +40,10 @@ use core::arch::asm;
 use core::fmt;
 use core::ops;
 
-use tock_registers::interfaces::{Readable, Writeable};
 use tock_registers::register_bitfields;
+
+pub use tock_registers::interfaces::{Readable, Writeable};
+pub use tock_registers::registers::InMemoryRegister;
 
 register_bitfields! {
     u32,
