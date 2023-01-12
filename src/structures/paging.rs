@@ -566,6 +566,10 @@ impl PageTableDescriptor {
         Ok(PhysicalAddress(strip_addr))
     }
 
+    pub fn get_flags(&self) -> Result<u32>  {
+        Ok(self.0 & 0xffff)
+    }
+
     pub fn as_u32(&self) -> u32 {
         self.0
     }
