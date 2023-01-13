@@ -542,6 +542,10 @@ impl PageTableDescriptor {
         Ok(Self(out))
     }
 
+    pub fn from_u32(val: u32) -> PageTableDescriptor {
+        Self(val)
+    }
+
     /// Determine the type of the page descriptor
     pub fn get_type(self) -> PageTableType {
         // starts with
