@@ -8,6 +8,8 @@ use core::ops::{Add, AddAssign, BitOr, Sub, SubAssign};
 pub mod asm;
 pub mod regs;
 pub mod structures;
+
+#[cfg(feature = "critical-section")]
 pub mod critical_section;
 
 #[derive(Copy, Clone, Debug)]
