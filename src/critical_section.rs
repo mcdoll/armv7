@@ -12,7 +12,7 @@ unsafe impl Impl for SingleCoreCriticalSection {
     }
 
     unsafe fn release(cpsr_old: RawRestoreState) {
-        if cpsr_old & 0x80 != 0 {
+        if cpsr_old & 0x80 == 0 {
             core::arch::asm!("cpsie i");
         }
     }
