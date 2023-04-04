@@ -8,6 +8,7 @@ use core::ops::{Add, AddAssign, BitOr, Sub, SubAssign};
 pub mod asm;
 pub mod regs;
 pub mod structures;
+pub mod critical_section;
 
 #[derive(Copy, Clone, Debug)]
 #[repr(transparent)]

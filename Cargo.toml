@@ -14,6 +14,7 @@ keywords = ["arm", "no_std", "cortex-a"]
 
 [dependencies]
 tock-registers = { version = "0.8.1", features = ["register_types"] }
+critical-section = { version = "1.0.0", features = ["restore-state-u32"] }
 
 [package.metadata.docs.rs]
 default-target = "x86_64-unknown-linux-gnu"
