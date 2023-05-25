@@ -153,23 +153,6 @@ impl DeviceVmemMapper {
             device_base_addresses,
         }
     }
-
-    /// Lookup virtual addresses from physical ones
-    pub fn lookup(&self, phys_addr: PhysicalAddress) -> Option<VirtualAddress> {
-        let phys_index = phys_addr.as_u32() >> 24;
-        match self
-            .device_base_addresses
-            .iter()
-            .position(|&y| y == phys_index as u8)
-        {
-            None => None,
-            Some(index) => {
-                let naked_phys_addr = phys_addr.as_u32() & 0x00ff_ffff;
-                let out = self.base_address + (index << 24);
-                Some(out | naked_phys_addr)
-            }
-        }
-    }
 }
 
 /// Calculate the physical frame from a given virtual address
@@ -429,12 +412,6 @@ impl TranslationTable {
         TranslationTable {
             pointer: ttbr0 as *mut _,
         }
-    }
-    /// Get the ttbr0 translation table
-    pub fn get_ttbr0(offset_mapping: OffsetMapping) -> Result<Self> {
-        let phys_addr = Self::get_ttbr0_phys();
-        let virt_addr = offset_mapping.convert_phys_addr(phys_addr)?;
-        Ok(Self::new(virt_addr.as_mut_ptr()))
     }
 
     /// Returns the physical address of the translation page table
