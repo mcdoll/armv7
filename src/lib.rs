@@ -1,5 +1,6 @@
 //! Crate for low-level armv7 routines
 
+#![cfg(target_arch = "arm")]
 #![no_std]
 
 use core::fmt;
