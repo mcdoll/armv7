@@ -15,7 +15,9 @@
 //! ```
 
 use core::fmt;
-use register::{cpu::RegisterReadWrite, register_bitfields, FieldValue};
+use tock_registers::fields::FieldValue;
+use tock_registers::interfaces::{ReadWriteable, Readable, Writeable};
+use tock_registers::register_bitfields;
 
 register_bitfields! {u32,
     pub PSR [
@@ -67,15 +69,31 @@ pub fn get_current_mode() -> Option<PSR::MODE::Value> {
 
 pub struct CurrentProgramState;
 
-impl RegisterReadWrite<u32, PSR::Register> for CurrentProgramState {
+impl Readable for CurrentProgramState {
+    type T = u32;
+    type R = PSR::Register;
+
     psr_read_raw!(u32, "cpsr");
+}
+impl Writeable for CurrentProgramState {
+    type T = u32;
+    type R = PSR::Register;
+
     psr_write_raw!(u32, "cpsr");
 }
 
 pub struct SavedProgramState;
 
-impl RegisterReadWrite<u32, PSR::Register> for SavedProgramState {
+impl Readable for SavedProgramState {
+    type T = u32;
+    type R = PSR::Register;
+
     psr_read_raw!(u32, "spsr");
+}
+impl Writeable for SavedProgramState {
+    type T = u32;
+    type R = PSR::Register;
+
     psr_write_raw!(u32, "spsr");
 }
 

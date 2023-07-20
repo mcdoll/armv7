@@ -1,16 +1,17 @@
 //! Crate for low-level armv7 routines
 
-#![feature(llvm_asm)]
-#![feature(stdsimd)]
+#![cfg(target_arch = "arm")]
 #![no_std]
-#![feature(const_fn)]
 
 use core::fmt;
 use core::ops::{Add, AddAssign, BitOr, Sub, SubAssign};
 
-//pub mod asm;
+pub mod asm;
 pub mod regs;
 pub mod structures;
+
+#[cfg(feature = "critical-section")]
+pub mod critical_section;
 
 #[derive(Copy, Clone, Debug)]
 #[repr(transparent)]
